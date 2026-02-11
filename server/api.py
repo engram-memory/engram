@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 import os
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +46,9 @@ from server.auth.routes import router as auth_router
 
 init_admin_db()
 app.include_router(auth_router)
+
+from server.billing.routes import router as billing_router
+app.include_router(billing_router)
 
 if auth_deps.CLOUD_MODE:
     from server.middleware import RateLimitMiddleware

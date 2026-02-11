@@ -34,10 +34,21 @@ def init_admin_db() -> None:
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT,
                 tier TEXT NOT NULL DEFAULT 'free',
+                stripe_customer_id TEXT,
+                stripe_subscription_id TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login_at TIMESTAMP
             )
         """)
+        # Add Stripe columns if upgrading from older schema
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
         c.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
                 id TEXT PRIMARY KEY,
@@ -95,6 +106,24 @@ def update_user_tier(user_id: str, tier: str) -> None:
     with _conn() as c:
         c.execute("UPDATE users SET tier = ? WHERE id = ?", (tier, user_id))
         c.commit()
+
+
+def update_stripe_customer_id(user_id: str, customer_id: str) -> None:
+    with _conn() as c:
+        c.execute("UPDATE users SET stripe_customer_id = ? WHERE id = ?", (customer_id, user_id))
+        c.commit()
+
+
+def update_stripe_subscription_id(user_id: str, subscription_id: str | None) -> None:
+    with _conn() as c:
+        c.execute("UPDATE users SET stripe_subscription_id = ? WHERE id = ?", (subscription_id, user_id))
+        c.commit()
+
+
+def get_user_by_stripe_customer_id(customer_id: str) -> Optional[dict]:
+    with _conn() as c:
+        row = c.execute("SELECT * FROM users WHERE stripe_customer_id = ?", (customer_id,)).fetchone()
+        return dict(row) if row else None
 
 
 # ------------------------------------------------------------------

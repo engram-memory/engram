@@ -36,6 +36,8 @@ server = [
     "uvicorn>=0.20.0",
     "websockets>=12.0",
     "PyJWT>=2.8.0",
+    "stripe>=8.0.0",
+    "python-dotenv>=1.0.0",
 ]
 mcp = [
     "mcp>=1.2.0",
