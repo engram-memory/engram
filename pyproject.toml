@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "engram-ai"
+version = "0.1.0"
+description = "Memory that sticks. Universal memory layer for AI agents."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Levent", email = "levent@engram.dev" },
+]
+keywords = ["ai", "agents", "memory", "llm", "mcp", "rag"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "websockets>=12.0",
+]
+mcp = [
+    "mcp>=1.2.0",
+]
+embeddings = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.24.0",
+]
+all = [
+    "engram-ai[server,mcp,embeddings]",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/levent/engram"
+Documentation = "https://engram.dev/docs"
+Repository = "https://github.com/levent/engram"
+Issues = "https://github.com/levent/engram/issues"
+
+[project.scripts]
+engram = "engram.cli:main"
+engram-server = "server.api:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/engram"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

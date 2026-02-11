@@ -1,0 +1,202 @@
+"""User-facing Memory client — the 5-line API."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from engram.config import EngramConfig
+from engram.core.types import MemoryEntry, MemoryType, SearchResult
+from engram.exceptions import MemoryNotFound
+from engram.storage.sqlite_backend import SQLiteBackend
+
+
+class Memory:
+    """Universal memory layer for AI agents.
+
+    >>> mem = Memory()
+    >>> mem.store("User prefers Python", type="preference", importance=8)
+    1
+    >>> results = mem.search("programming language")
+    >>> context = mem.recall(limit=10)
+    """
+
+    def __init__(
+        self,
+        config: EngramConfig | None = None,
+        *,
+        namespace: str | None = None,
+        db_path: str | Path | None = None,
+    ):
+        self._config = config or EngramConfig()
+        if db_path:
+            self._config.db_path = Path(db_path)
+        self._namespace = namespace or self._config.default_namespace
+        self._backend = SQLiteBackend(self._config.db_path)
+
+        # Optional embedding provider
+        self._embedder = None
+        if self._config.enable_embeddings:
+            from engram.embeddings.local import LocalEmbedding
+
+            self._embedder = LocalEmbedding(self._config.embedding_model)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def store(
+        self,
+        content: str,
+        *,
+        type: str = "fact",
+        importance: int = 5,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        namespace: str | None = None,
+    ) -> int | None:
+        """Store a memory. Returns the id, or ``None`` if duplicate."""
+        entry = MemoryEntry(
+            content=content,
+            memory_type=MemoryType(type),
+            importance=importance,
+            namespace=namespace or self._namespace,
+            tags=tags or [],
+            metadata=metadata or {},
+        )
+        if self._embedder:
+            entry.embedding = self._embedder.embed(content)
+        return self._backend.store(entry)
+
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 10,
+        namespace: str | None = None,
+        semantic: bool = False,
+    ) -> list[SearchResult]:
+        """Search memories by text (FTS5) or semantically."""
+        ns = namespace or self._namespace
+        if semantic and self._embedder:
+            vec = self._embedder.embed(query)
+            return self._backend.search_vector(vec, namespace=ns, limit=limit)
+        return self._backend.search_text(query, namespace=ns, limit=limit)
+
+    def recall(
+        self,
+        *,
+        limit: int = 20,
+        namespace: str | None = None,
+        min_importance: int = 7,
+    ) -> list[MemoryEntry]:
+        """Retrieve highest-priority memories for context injection."""
+        return self._backend.get_priority_memories(
+            namespace=namespace or self._namespace,
+            limit=limit,
+            min_importance=min_importance,
+        )
+
+    def get(self, memory_id: int) -> MemoryEntry:
+        """Fetch a single memory by id."""
+        entry = self._backend.get(memory_id)
+        if entry is None:
+            raise MemoryNotFound(memory_id)
+        return entry
+
+    def delete(self, memory_id: int) -> bool:
+        """Delete a memory. Returns True if it existed."""
+        return self._backend.delete(memory_id)
+
+    def update(self, memory_id: int, **fields: Any) -> MemoryEntry:
+        """Partial update of a memory's fields."""
+        entry = self._backend.update(memory_id, **fields)
+        if entry is None:
+            raise MemoryNotFound(memory_id)
+        return entry
+
+    def list(
+        self,
+        *,
+        namespace: str | None = None,
+        type: str | None = None,
+        min_importance: int | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[MemoryEntry]:
+        """List memories with optional filters."""
+        return self._backend.list_memories(
+            namespace=namespace or self._namespace,
+            memory_type=type,
+            min_importance=min_importance,
+            limit=limit,
+            offset=offset,
+        )
+
+    def stats(self, namespace: str | None = None) -> dict[str, Any]:
+        """Return aggregate statistics."""
+        return self._backend.stats(namespace=namespace or self._namespace)
+
+    def prune(
+        self,
+        *,
+        days: int = 30,
+        min_importance: int = 3,
+        namespace: str | None = None,
+    ) -> int:
+        """Remove old, low-importance, rarely-accessed memories."""
+        from datetime import timedelta
+
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        ns = namespace or self._namespace
+
+        import sqlite3
+
+        with self._backend._conn() as conn:
+            cur = conn.execute(
+                """
+                DELETE FROM memories
+                WHERE accessed_at < ?
+                  AND importance < ?
+                  AND access_count < 3
+                  AND namespace = ?
+                """,
+                (cutoff.isoformat(), min_importance, ns),
+            )
+            conn.commit()
+            return cur.rowcount
+
+    def export_memories(
+        self,
+        *,
+        namespace: str | None = None,
+        format: str = "json",
+    ) -> str:
+        """Export all memories in a namespace as JSON or Markdown."""
+        entries = self.list(namespace=namespace, limit=10000)
+        if format == "markdown":
+            lines = [f"# Engram Memory Export ({datetime.utcnow().isoformat()})\n"]
+            for e in entries:
+                lines.append(f"## [{e.memory_type.value}] (importance: {e.importance})")
+                lines.append(e.content)
+                if e.tags:
+                    lines.append(f"Tags: {', '.join(e.tags)}")
+                lines.append("")
+            return "\n".join(lines)
+        return json.dumps(
+            [e.model_dump(mode="json", exclude={"embedding"}) for e in entries],
+            indent=2,
+            default=str,
+        )
+
+    def import_memories(self, data: str) -> int:
+        """Import memories from a JSON string. Returns count of new memories."""
+        items = json.loads(data)
+        count = 0
+        for item in items:
+            entry = MemoryEntry(**item)
+            if self._backend.store(entry) is not None:
+                count += 1
+        return count

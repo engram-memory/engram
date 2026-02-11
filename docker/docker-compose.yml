@@ -1,0 +1,15 @@
+services:
+  engram:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8100:8100"
+    volumes:
+      - engram_data:/data
+    environment:
+      - ENGRAM_API_KEY=${ENGRAM_API_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  engram_data:
