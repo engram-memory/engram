@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "engram-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "Memory that sticks. Universal memory layer for AI agents."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Levent", email = "levent@engram.dev" },
+    { name = "Levent", email = "levent.arslan.001@gmail.com" },
 ]
 keywords = ["ai", "agents", "memory", "llm", "mcp", "rag"]
 classifiers = [
@@ -35,6 +35,7 @@ server = [
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",
     "websockets>=12.0",
+    "PyJWT>=2.8.0",
 ]
 mcp = [
     "mcp>=1.2.0",
@@ -54,17 +55,17 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/levent/engram"
-Documentation = "https://engram.dev/docs"
-Repository = "https://github.com/levent/engram"
-Issues = "https://github.com/levent/engram/issues"
+Homepage = "https://github.com/engram-memory/engram"
+Documentation = "https://github.com/engram-memory/engram#readme"
+Repository = "https://github.com/engram-memory/engram"
+Issues = "https://github.com/engram-memory/engram/issues"
 
 [project.scripts]
 engram = "engram.cli:main"
 engram-server = "server.api:run"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/engram"]
+packages = ["src/engram", "server"]
 
 [tool.ruff]
 target-version = "py310"

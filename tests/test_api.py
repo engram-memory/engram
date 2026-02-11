@@ -12,11 +12,14 @@ from fastapi.testclient import TestClient
 def _isolate_db(tmp_path: Path, monkeypatch):
     """Point Engram at a temp DB so tests don't touch real data."""
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("ENGRAM_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.delenv("ENGRAM_CLOUD_MODE", raising=False)
+    monkeypatch.delenv("ENGRAM_API_KEY", raising=False)
     # Clear cached Memory instances
     import server.api as api_mod
 
     api_mod._memories.clear()
-    api_mod._config.db_path = tmp_path / "test_api.db"
+    api_mod._DATA_DIR = tmp_path / "data"
 
 
 @pytest.fixture()

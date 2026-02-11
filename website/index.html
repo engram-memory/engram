@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engram — Memory for AI Agents</title>
+<meta name="description" content="Give your AI agents persistent memory in 5 lines of Python. Zero config. Self-hosted. Open source.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #0f0f18;
+  --bg-card: #12121e;
+  --bg-card-hover: #18182a;
+  --bg-code: #0d0d16;
+  --border: #1e1e35;
+  --border-glow: #6B46C120;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a8;
+  --text-muted: #55556a;
+  --purple: #6B46C1;
+  --purple-light: #8B5CF6;
+  --purple-glow: #6B46C140;
+  --cyan: #06B6D4;
+  --cyan-light: #22D3EE;
+  --cyan-glow: #06B6D440;
+  --green: #10B981;
+  --red: #EF4444;
+  --yellow: #F59E0B;
+  --gradient: linear-gradient(135deg, var(--purple), var(--cyan));
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== UTILITY ========== */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.gradient-text { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+.section-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto 48px;
+}
+
+section {
+  padding: 100px 0;
+  position: relative;
+}
+
+/* ========== NAV ========== */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 16px 0;
+  background: #0a0a0fcc;
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s;
+}
+nav.scrolled { border-bottom-color: var(--border); }
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.nav-logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-decoration: none;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-logo .logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--gradient);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text-primary); }
+
+.nav-cta {
+  padding: 8px 20px;
+  background: var(--gradient);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+.nav-cta:hover { opacity: 0.9; }
+
+.nav-mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* ========== HERO ========== */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding-top: 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, var(--purple-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 100px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.hero-badge .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.hero h1 {
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  margin-bottom: 20px;
+  letter-spacing: -0.03em;
+}
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 36px;
+  max-width: 500px;
+}
+
+.hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+
+.btn-install {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.btn-install:hover {
+  border-color: var(--purple);
+  background: var(--bg-card-hover);
+}
+.btn-install .prompt { color: var(--cyan); }
+.btn-install .copy-icon {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: color 0.2s;
+}
+.btn-install:hover .copy-icon { color: var(--text-primary); }
+.btn-install.copied { border-color: var(--green); }
+.btn-install.copied .copy-icon { color: var(--green); }
+
+.btn-github {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: var(--gradient);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+.btn-github:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-github svg { width: 20px; height: 20px; }
+
+/* Hero code block */
+.hero-code {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px #00000060, 0 0 60px var(--purple-glow);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: #0a0a12;
+  border-bottom: 1px solid var(--border);
+}
+.code-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.code-dot.red { background: #EF4444; }
+.code-dot.yellow { background: #F59E0B; }
+.code-dot.green { background: #10B981; }
+.code-filename {
+  margin-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.code-body {
+  padding: 24px;
+  overflow-x: auto;
+}
+
+.code-body pre {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  white-space: pre;
+}
+
+/* CSS-only syntax highlighting */
+.kw { color: #C084FC; }       /* keywords: from, import, async, await, def */
+.fn { color: #22D3EE; }       /* functions */
+.str { color: #34D399; }      /* strings */
+.cm { color: #555580; }       /* comments */
+.op { color: #94A3B8; }       /* operators, punctuation */
+.var { color: #e8e8f0; }      /* variables */
+.num { color: #F59E0B; }      /* numbers */
+.cls { color: #F472B6; }      /* class names */
+.dec { color: #FB923C; }      /* decorators */
+
+/* ========== PROBLEM ========== */
+.problem {
+  background: var(--bg-secondary);
+  text-align: center;
+}
+
+.problem-content { max-width: 800px; margin: 0 auto; }
+
+.problem h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  margin-bottom: 24px;
+  line-height: 1.2;
+}
+
+.problem-text {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.problem-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin-top: 48px;
+}
+
+.stat-card {
+  padding: 32px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.stat-card:hover {
+  border-color: var(--purple);
+  transform: translateY(-4px);
+}
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* ========== FEATURES ========== */
+.features { text-align: center; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+}
+
+.feature-card {
+  padding: 36px 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  text-align: left;
+  transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.feature-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px #00000040;
+}
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.feature-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.feature-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ========== COMPARISON ========== */
+.comparison {
+  background: var(--bg-secondary);
+  text-align: center;
+}
+
+.comparison-table-wrapper {
+  overflow-x: auto;
+  margin-top: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 700px;
+}
+
+.comparison-table thead th {
+  padding: 18px 24px;
+  background: var(--bg-card);
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.comparison-table thead th:first-child { text-align: left; }
+.comparison-table thead th.highlight {
+  background: linear-gradient(180deg, #6B46C118, var(--bg-card));
+  color: var(--purple-light);
+  position: relative;
+}
+.comparison-table thead th.highlight::after {
+  content: 'BEST';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gradient);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 0 0 6px 6px;
+  letter-spacing: 0.1em;
+}
+
+.comparison-table tbody td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #1a1a2e;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.comparison-table tbody td:first-child {
+  text-align: left;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.comparison-table tbody td.highlight {
+  background: #6B46C108;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.comparison-table tbody tr:last-child td { border-bottom: none; }
+.comparison-table tbody tr:hover td { background: #ffffff04; }
+.comparison-table tbody tr:hover td.highlight { background: #6B46C110; }
+
+.check { color: var(--green); font-weight: 600; }
+.cross { color: var(--red); font-weight: 600; }
+.partial { color: var(--yellow); }
+.deprecated { color: var(--red); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+
+/* ========== PRICING ========== */
+.pricing { text-align: center; }
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+  align-items: start;
+}
+
+.price-card {
+  padding: 40px 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  text-align: left;
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+}
+.price-card:hover {
+  transform: translateY(-4px);
+}
+.price-card.featured {
+  border-color: var(--purple);
+  box-shadow: 0 0 60px var(--purple-glow), 0 24px 48px #00000040;
+}
+.price-card.featured::before {
+  content: 'POPULAR';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gradient);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 100px;
+  letter-spacing: 0.1em;
+}
+
+.price-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.price-amount {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.price-amount .currency { font-size: 1.5rem; vertical-align: top; color: var(--text-secondary); }
+.price-amount .period { font-size: 1rem; font-weight: 400; color: var(--text-muted); }
+
+.price-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.price-features { list-style: none; margin-bottom: 32px; }
+.price-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.price-features li::before {
+  content: '';
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  background: var(--green);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 6L9 17l-5-5' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 6L9 17l-5-5' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.price-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  border: none;
+  font-family: var(--font-sans);
+}
+.price-btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.price-btn-outline:hover {
+  border-color: var(--purple);
+  background: var(--bg-card-hover);
+}
+.price-btn-primary {
+  background: var(--gradient);
+  color: white;
+}
+.price-btn-primary:hover { opacity: 0.9; }
+
+.pricing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 48px;
+  padding: 12px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.pricing-badge svg { color: var(--green); }
+
+.waitlist-note {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.waitlist-note a {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-decoration-color: var(--cyan-glow);
+  text-underline-offset: 3px;
+}
+.waitlist-note a:hover { text-decoration-color: var(--cyan); }
+
+/* ========== CODE EXAMPLES ========== */
+.examples {
+  background: var(--bg-secondary);
+  text-align: center;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  display: inline-flex;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active {
+  background: var(--purple);
+  color: white;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.example-code {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  text-align: left;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.example-code .code-body pre {
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+/* ========== FOOTER ========== */
+footer {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+}
+
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.footer-logo {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.footer-logo .logo-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--gradient);
+  border-radius: 5px;
+}
+
+.footer-links { display: flex; gap: 24px; list-style: none; }
+.footer-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--text-primary); }
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.footer-right a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-right a:hover { color: var(--text-primary); }
+
+/* ========== ANIMATIONS ========== */
+.fade-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* stagger children */
+.stagger > * { transition-delay: calc(var(--i, 0) * 80ms); }
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .hero-content { grid-template-columns: 1fr; gap: 48px; }
+  .hero-code { max-width: 600px; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid .price-card:last-child {
+    grid-column: 1 / -1;
+    max-width: 480px;
+    justify-self: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  section { padding: 72px 0; }
+  .nav-links { display: none; }
+  .nav-cta { display: none; }
+  .nav-mobile-toggle { display: block; }
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+    padding: 24px;
+    gap: 16px;
+  }
+  .hero { min-height: auto; padding-top: 120px; padding-bottom: 60px; }
+  .hero h1 { font-size: 2.5rem; }
+  .hero-actions { flex-direction: column; }
+  .btn-install, .btn-github { justify-content: center; }
+  .features-grid { grid-template-columns: 1fr; }
+  .problem-stats { grid-template-columns: 1fr; gap: 16px; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-grid .price-card:last-child { max-width: 100%; }
+  .footer-inner { flex-direction: column; text-align: center; }
+  .footer-left { flex-direction: column; }
+  .tabs { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 2rem; }
+  .code-body { padding: 16px; }
+  .code-body pre { font-size: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== NAV ==================== -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="logo-icon"></div>
+      engram
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#comparison">Compare</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#examples">Examples</a></li>
+    </ul>
+    <a href="https://github.com/leventdev/engram" class="nav-cta" target="_blank" rel="noopener">GitHub</a>
+    <button class="nav-mobile-toggle" id="navToggle" aria-label="Toggle menu">&#9776;</button>
+  </div>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="hero-content">
+      <div class="fade-in">
+        <div class="hero-badge">
+          <span class="dot"></span>
+          v1.0 &mdash; Production Ready
+        </div>
+        <h1>Memory<br>that <span class="gradient-text">sticks.</span></h1>
+        <p class="hero-subtitle">
+          Give your AI agents persistent memory in 5 lines of Python. Zero config. Self-hosted. Open source.
+        </p>
+        <div class="hero-actions">
+          <button class="btn-install" id="installBtn" onclick="copyInstall(this)">
+            <span class="prompt">$</span>
+            <span>pip install engram-ai</span>
+            <span class="copy-icon" id="copyIcon">&#x2398;</span>
+          </button>
+          <a href="https://github.com/leventdev/engram" class="btn-github" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            Star on GitHub
+          </a>
+        </div>
+      </div>
+      <div class="fade-in" style="--i:1">
+        <div class="hero-code">
+          <div class="code-header">
+            <div class="code-dot red"></div>
+            <div class="code-dot yellow"></div>
+            <div class="code-dot green"></div>
+            <span class="code-filename">quickstart.py</span>
+          </div>
+          <div class="code-body">
+<pre><span class="kw">from</span> <span class="var">engram</span> <span class="kw">import</span> <span class="cls">Engram</span>
+
+<span class="var">memory</span> <span class="op">=</span> <span class="cls">Engram</span><span class="op">()</span>
+
+<span class="cm"># Store a memory</span>
+<span class="var">memory</span><span class="op">.</span><span class="fn">store</span><span class="op">(</span><span class="str">"User prefers dark mode"</span><span class="op">,</span>
+    <span class="var">tags</span><span class="op">=[</span><span class="str">"preference"</span><span class="op">],</span>
+    <span class="var">importance</span><span class="op">=</span><span class="num">8</span>
+<span class="op">)</span>
+
+<span class="cm"># Search memories</span>
+<span class="var">results</span> <span class="op">=</span> <span class="var">memory</span><span class="op">.</span><span class="fn">search</span><span class="op">(</span><span class="str">"dark mode"</span><span class="op">)</span>
+
+<span class="cm"># Recall top memories</span>
+<span class="var">context</span> <span class="op">=</span> <span class="var">memory</span><span class="op">.</span><span class="fn">recall</span><span class="op">(</span><span class="var">limit</span><span class="op">=</span><span class="num">10</span><span class="op">)</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PROBLEM ==================== -->
+<section class="problem" id="problem">
+  <div class="container">
+    <div class="problem-content fade-in">
+      <p class="section-label">The Problem</p>
+      <h2>AI Agents haben <span class="gradient-text">Alzheimer.</span></h2>
+      <p class="problem-text">
+        Every conversation starts from scratch. Every context is forgotten.
+        Your AI agents process thousands of interactions &mdash; and remember none of them.
+        They ask the same questions, make the same mistakes, lose the same insights.
+        <strong>Memory isn't a feature. It's the foundation.</strong>
+      </p>
+      <div class="problem-stats stagger">
+        <div class="stat-card" style="--i:0">
+          <div class="stat-number gradient-text">87%</div>
+          <div class="stat-label">of agent failures stem from missing context</div>
+        </div>
+        <div class="stat-card" style="--i:1">
+          <div class="stat-number gradient-text">5x</div>
+          <div class="stat-label">faster agent onboarding with persistent memory</div>
+        </div>
+        <div class="stat-card" style="--i:2">
+          <div class="stat-number gradient-text">&lt;1s</div>
+          <div class="stat-label">memory recall latency with Engram</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FEATURES ==================== -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="fade-in">
+      <p class="section-label">Features</p>
+      <h2 class="section-title">Everything you need. <span class="gradient-text">Nothing you don't.</span></h2>
+      <p class="section-subtitle">Built for developers who value simplicity, privacy, and performance.</p>
+    </div>
+    <div class="features-grid stagger">
+      <div class="feature-card fade-in" style="--i:0">
+        <div class="feature-icon">&#9889;</div>
+        <h3>Zero Config</h3>
+        <p>No databases to set up. No Docker containers to manage. No environment variables to configure. Install and go.</p>
+      </div>
+      <div class="feature-card fade-in" style="--i:1">
+        <div class="feature-icon">&#10094;/&#10095;</div>
+        <h3>5-Line API</h3>
+        <p>Store, search, and recall memories with an API so simple it fits in a tweet. No boilerplate. No ceremony.</p>
+      </div>
+      <div class="feature-card fade-in" style="--i:2">
+        <div class="feature-icon">&#x1F50C;</div>
+        <h3>MCP Native</h3>
+        <p>First-class Model Context Protocol support. Connect to Claude, Cursor, or any MCP-compatible client out of the box.</p>
+      </div>
+      <div class="feature-card fade-in" style="--i:3">
+        <div class="feature-icon">&#x1F916;</div>
+        <h3>Multi-Agent</h3>
+        <p>Isolated namespaces per agent. Shared memory pools when you need them. Built for swarm architectures.</p>
+      </div>
+      <div class="feature-card fade-in" style="--i:4">
+        <div class="feature-icon">&#x1F512;</div>
+        <h3>Privacy-First</h3>
+        <p>Your data stays on your machine. No cloud. No telemetry. No third-party services. MIT licensed.</p>
+      </div>
+      <div class="feature-card fade-in" style="--i:5">
+        <div class="feature-icon">&#x1F9E0;</div>
+        <h3>Smart Memory</h3>
+        <p>Importance scoring, automatic deduplication, full-text search, and semantic recall. Memories that matter surface first.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== COMPARISON ==================== -->
+<section class="comparison" id="comparison">
+  <div class="container">
+    <div class="fade-in">
+      <p class="section-label">Comparison</p>
+      <h2 class="section-title">See how Engram <span class="gradient-text">stacks up.</span></h2>
+      <p class="section-subtitle">We built Engram because existing solutions were too complex for what should be simple.</p>
+    </div>
+    <div class="comparison-table-wrapper fade-in">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="highlight">Engram</th>
+            <th>Mem0</th>
+            <th>Letta</th>
+            <th>Zep</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Setup</td>
+            <td class="highlight"><span class="check">Zero-Config</span></td>
+            <td>Complex</td>
+            <td>Docker + PG</td>
+            <td><span class="deprecated">Cloud-only</span></td>
+          </tr>
+          <tr>
+            <td>Self-Hosted</td>
+            <td class="highlight"><span class="check">Yes (trivial)</span></td>
+            <td><span class="partial">Yes (complex)</span></td>
+            <td><span class="partial">Yes (Docker)</span></td>
+            <td><span class="deprecated">Deprecated</span></td>
+          </tr>
+          <tr>
+            <td>Dependencies</td>
+            <td class="highlight"><span class="check">None</span></td>
+            <td>Neo4j + Vector DB</td>
+            <td>PostgreSQL</td>
+            <td><span class="deprecated">Cloud-only</span></td>
+          </tr>
+          <tr>
+            <td>API Complexity</td>
+            <td class="highlight"><span class="check">5 lines</span></td>
+            <td>Medium</td>
+            <td>Complex</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td>MCP Support</td>
+            <td class="highlight"><span class="check">First-Class</span></td>
+            <td><span class="partial">Community</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="partial">Yes</span></td>
+          </tr>
+          <tr>
+            <td>License</td>
+            <td class="highlight"><span class="check">MIT</span></td>
+            <td>Apache 2.0</td>
+            <td>Apache 2.0</td>
+            <td><span class="deprecated">Cloud-only</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PRICING ==================== -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="fade-in">
+      <p class="section-label">Pricing</p>
+      <h2 class="section-title">Simple, <span class="gradient-text">transparent</span> pricing.</h2>
+      <p class="section-subtitle">Start free. Scale when you're ready. No credit card required.</p>
+    </div>
+    <div class="pricing-grid stagger">
+      <!-- Free -->
+      <div class="price-card fade-in" style="--i:0">
+        <div class="price-name">Free</div>
+        <div class="price-amount">
+          <span class="currency">&euro;</span>0
+        </div>
+        <div class="price-desc">Perfect for getting started and personal projects.</div>
+        <ul class="price-features">
+          <li>5,000 Memories</li>
+          <li>2 Agent Namespaces</li>
+          <li>Full-Text Search (FTS5)</li>
+          <li>REST API + MCP Server</li>
+          <li>Community Support</li>
+        </ul>
+        <a href="https://github.com/leventdev/engram" class="price-btn price-btn-outline" target="_blank" rel="noopener">Get Started</a>
+      </div>
+      <!-- Pro -->
+      <div class="price-card featured fade-in" style="--i:1">
+        <div class="price-name">Pro</div>
+        <div class="price-amount">
+          <span class="currency">&euro;</span>29<span class="period">/mo</span>
+        </div>
+        <div class="price-desc">For teams building production AI agents.</div>
+        <ul class="price-features">
+          <li>250,000 Memories</li>
+          <li>25 Agent Namespaces</li>
+          <li>Semantic Search</li>
+          <li>WebSocket Real-Time API</li>
+          <li>Analytics Dashboard</li>
+          <li>Priority Email Support</li>
+        </ul>
+        <button class="price-btn price-btn-primary" onclick="joinWaitlist()">Join Waitlist</button>
+      </div>
+      <!-- Enterprise -->
+      <div class="price-card fade-in" style="--i:2">
+        <div class="price-name">Enterprise</div>
+        <div class="price-amount">
+          <span class="currency">&euro;</span>299<span class="period">/mo</span>
+        </div>
+        <div class="price-desc">For organizations with advanced requirements.</div>
+        <ul class="price-features">
+          <li>Unlimited Memories</li>
+          <li>Unlimited Agents</li>
+          <li>Custom Embeddings</li>
+          <li>SSO / SAML</li>
+          <li>Dedicated Support</li>
+          <li>SLA Guarantee</li>
+        </ul>
+        <button class="price-btn price-btn-outline" onclick="joinWaitlist()">Contact Sales</button>
+      </div>
+    </div>
+    <div class="fade-in" style="margin-top:48px">
+      <div class="pricing-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        Open Source Core &mdash; Free. Forever.
+      </div>
+      <p class="waitlist-note">
+        Cloud hosted version coming soon. <a href="mailto:levent@engram.dev">Join the waitlist</a> to get early access.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CODE EXAMPLES ==================== -->
+<section class="examples" id="examples">
+  <div class="container">
+    <div class="fade-in">
+      <p class="section-label">Examples</p>
+      <h2 class="section-title">Up and running in <span class="gradient-text">minutes.</span></h2>
+      <p class="section-subtitle">Copy, paste, run. That's it.</p>
+    </div>
+    <div class="fade-in">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-quickstart')">quickstart.py</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-multiagent')">multi_agent.py</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-mcp')">MCP config</button>
+      </div>
+
+      <!-- quickstart.py -->
+      <div class="tab-panel active" id="tab-quickstart">
+        <div class="example-code">
+          <div class="code-header">
+            <div class="code-dot red"></div>
+            <div class="code-dot yellow"></div>
+            <div class="code-dot green"></div>
+            <span class="code-filename">quickstart.py</span>
+          </div>
+          <div class="code-body">
+<pre><span class="kw">from</span> <span class="var">engram</span> <span class="kw">import</span> <span class="cls">Engram</span>
+
+<span class="cm"># Initialize — that's it. No config needed.</span>
+<span class="var">memory</span> <span class="op">=</span> <span class="cls">Engram</span><span class="op">()</span>
+
+<span class="cm"># Store facts, preferences, decisions</span>
+<span class="var">memory</span><span class="op">.</span><span class="fn">store</span><span class="op">(</span>
+    <span class="var">content</span><span class="op">=</span><span class="str">"User prefers dark mode and compact layout"</span><span class="op">,</span>
+    <span class="var">tags</span><span class="op">=[</span><span class="str">"preference"</span><span class="op">,</span> <span class="str">"ui"</span><span class="op">],</span>
+    <span class="var">importance</span><span class="op">=</span><span class="num">8</span>
+<span class="op">)</span>
+
+<span class="cm"># Search with full-text search</span>
+<span class="var">results</span> <span class="op">=</span> <span class="var">memory</span><span class="op">.</span><span class="fn">search</span><span class="op">(</span><span class="str">"dark mode"</span><span class="op">)</span>
+<span class="kw">for</span> <span class="var">r</span> <span class="kw">in</span> <span class="var">results</span><span class="op">:</span>
+    <span class="fn">print</span><span class="op">(</span><span class="var">r</span><span class="op">.</span><span class="var">content</span><span class="op">,</span> <span class="var">r</span><span class="op">.</span><span class="var">importance</span><span class="op">)</span>
+
+<span class="cm"># Recall top memories for context injection</span>
+<span class="var">context</span> <span class="op">=</span> <span class="var">memory</span><span class="op">.</span><span class="fn">recall</span><span class="op">(</span><span class="var">limit</span><span class="op">=</span><span class="num">20</span><span class="op">,</span> <span class="var">min_importance</span><span class="op">=</span><span class="num">7</span><span class="op">)</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- multi_agent.py -->
+      <div class="tab-panel" id="tab-multiagent">
+        <div class="example-code">
+          <div class="code-header">
+            <div class="code-dot red"></div>
+            <div class="code-dot yellow"></div>
+            <div class="code-dot green"></div>
+            <span class="code-filename">multi_agent.py</span>
+          </div>
+          <div class="code-body">
+<pre><span class="kw">from</span> <span class="var">engram</span> <span class="kw">import</span> <span class="cls">Engram</span>
+
+<span class="cm"># Each agent gets its own namespace</span>
+<span class="var">researcher</span> <span class="op">=</span> <span class="cls">Engram</span><span class="op">(</span><span class="var">namespace</span><span class="op">=</span><span class="str">"researcher"</span><span class="op">)</span>
+<span class="var">analyst</span> <span class="op">=</span> <span class="cls">Engram</span><span class="op">(</span><span class="var">namespace</span><span class="op">=</span><span class="str">"analyst"</span><span class="op">)</span>
+<span class="var">writer</span> <span class="op">=</span> <span class="cls">Engram</span><span class="op">(</span><span class="var">namespace</span><span class="op">=</span><span class="str">"writer"</span><span class="op">)</span>
+
+<span class="cm"># Memories are isolated by default</span>
+<span class="var">researcher</span><span class="op">.</span><span class="fn">store</span><span class="op">(</span>
+    <span class="str">"Found 3 papers on transformer architectures"</span><span class="op">,</span>
+    <span class="var">tags</span><span class="op">=[</span><span class="str">"finding"</span><span class="op">,</span> <span class="str">"ml"</span><span class="op">],</span>
+    <span class="var">importance</span><span class="op">=</span><span class="num">9</span>
+<span class="op">)</span>
+
+<span class="cm"># But can be shared when needed</span>
+<span class="var">shared</span> <span class="op">=</span> <span class="cls">Engram</span><span class="op">(</span><span class="var">namespace</span><span class="op">=</span><span class="str">"shared"</span><span class="op">)</span>
+<span class="var">shared</span><span class="op">.</span><span class="fn">store</span><span class="op">(</span>
+    <span class="str">"Project deadline: March 15, 2026"</span><span class="op">,</span>
+    <span class="var">tags</span><span class="op">=[</span><span class="str">"project"</span><span class="op">,</span> <span class="str">"deadline"</span><span class="op">],</span>
+    <span class="var">importance</span><span class="op">=</span><span class="num">10</span>
+<span class="op">)</span>
+
+<span class="cm"># All agents can access shared memory</span>
+<span class="var">deadlines</span> <span class="op">=</span> <span class="var">shared</span><span class="op">.</span><span class="fn">search</span><span class="op">(</span><span class="str">"deadline"</span><span class="op">)</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- MCP config -->
+      <div class="tab-panel" id="tab-mcp">
+        <div class="example-code">
+          <div class="code-header">
+            <div class="code-dot red"></div>
+            <div class="code-dot yellow"></div>
+            <div class="code-dot green"></div>
+            <span class="code-filename">~/.claude.json</span>
+          </div>
+          <div class="code-body">
+<pre><span class="op">{</span>
+  <span class="str">"mcpServers"</span><span class="op">:</span> <span class="op">{</span>
+    <span class="str">"engram"</span><span class="op">:</span> <span class="op">{</span>
+      <span class="str">"command"</span><span class="op">:</span> <span class="str">"python3"</span><span class="op">,</span>
+      <span class="str">"args"</span><span class="op">:</span> <span class="op">[</span>
+        <span class="str">"-m"</span><span class="op">,</span> <span class="str">"engram.mcp_server"</span>
+      <span class="op">]</span>
+    <span class="op">}</span>
+  <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="cm">// That's it. Claude Code now has persistent memory.</span>
+<span class="cm">// Available tools:</span>
+<span class="cm">//   - memory_store</span>
+<span class="cm">//   - memory_search</span>
+<span class="cm">//   - memory_recall</span>
+<span class="cm">//   - memory_delete</span>
+<span class="cm">//   - memory_stats</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <a href="#" class="footer-logo">
+          <div class="logo-icon"></div>
+          engram
+        </a>
+        <ul class="footer-links">
+          <li><a href="https://github.com/leventdev/engram" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://pypi.org/project/engram-ai/" target="_blank" rel="noopener">PyPI</a></li>
+          <li><a href="#" title="Coming soon">Docs</a></li>
+        </ul>
+      </div>
+      <div class="footer-right">
+        <span>MIT License</span>
+        <span>&middot;</span>
+        <span>&copy; 2026 Levent</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ==================== JS ==================== -->
+<script>
+// Nav scroll effect
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+// Mobile menu
+document.getElementById('navToggle').addEventListener('click', () => {
+  document.getElementById('navLinks').classList.toggle('open');
+});
+
+// Close mobile menu on link click
+document.querySelectorAll('.nav-links a').forEach(link => {
+  link.addEventListener('click', () => {
+    document.getElementById('navLinks').classList.remove('open');
+  });
+});
+
+// Copy install command
+function copyInstall(btn) {
+  navigator.clipboard.writeText('pip install engram-ai').then(() => {
+    btn.classList.add('copied');
+    const icon = btn.querySelector('.copy-icon');
+    const orig = icon.innerHTML;
+    icon.innerHTML = '&#10003;';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      icon.innerHTML = orig;
+    }, 2000);
+  });
+}
+
+// Tab switching
+function switchTab(e, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+// Waitlist
+function joinWaitlist() {
+  window.location.href = 'mailto:levent@engram.dev?subject=Engram%20Cloud%20Waitlist&body=I%20want%20early%20access%20to%20Engram%20Cloud.';
+}
+
+// Scroll animations (IntersectionObserver)
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
