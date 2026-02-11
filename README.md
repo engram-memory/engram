@@ -15,7 +15,7 @@ context = mem.recall(limit=10)
 
 ## Features
 
-- **Zero config** — `pip install engram-ai` and go. SQLite out of the box, no external services.
+- **Zero config** — `pip install engram-core` and go. SQLite out of the box, no external services.
 - **5-line API** — Store, search, recall. That's it.
 - **MCP Server** — First-class Model Context Protocol integration for Claude Code and other MCP clients.
 - **REST API** — FastAPI server with WebSocket real-time updates.
@@ -29,16 +29,16 @@ context = mem.recall(limit=10)
 ## Installation
 
 ```bash
-pip install engram-ai
+pip install engram-core
 ```
 
 With optional extras:
 
 ```bash
-pip install engram-ai[server]      # REST API + WebSocket
-pip install engram-ai[mcp]         # MCP server
-pip install engram-ai[embeddings]  # Semantic search
-pip install engram-ai[all]         # Everything
+pip install engram-core[server]      # REST API + WebSocket
+pip install engram-core[mcp]         # MCP server
+pip install engram-core[embeddings]  # Semantic search
+pip install engram-core[all]         # Everything
 ```
 
 ## Quick Start

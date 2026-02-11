@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "engram-ai"
+name = "engram-core"
 version = "0.2.0"
 description = "Memory that sticks. Universal memory layer for AI agents."
 readme = "README.md"
@@ -45,7 +45,7 @@ embeddings = [
     "numpy>=1.24.0",
 ]
 all = [
-    "engram-ai[server,mcp,embeddings]",
+    "engram-core[server,mcp,embeddings]",
 ]
 dev = [
     "pytest>=7.0",
