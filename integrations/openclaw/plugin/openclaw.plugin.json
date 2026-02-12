@@ -1,0 +1,45 @@
+{
+  "name": "engram-memory",
+  "version": "0.1.0",
+  "description": "Local-first persistent memory for OpenClaw agents. No cloud, no API keys, your data stays on your machine.",
+  "entry": "dist/index.js",
+  "skills": ["skills/engram-memory"],
+  "configuration": {
+    "properties": {
+      "host": {
+        "type": "string",
+        "default": "http://localhost:8100",
+        "description": "Engram server URL (local by default)"
+      },
+      "namespace": {
+        "type": "string",
+        "default": "openclaw",
+        "description": "Memory namespace for isolation"
+      },
+      "autoRecall": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically inject relevant memories before each response"
+      },
+      "autoCapture": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically extract and store important facts after each response"
+      },
+      "minImportance": {
+        "type": "number",
+        "default": 5,
+        "description": "Minimum importance threshold for auto-recall (1-10)"
+      },
+      "maxRecallResults": {
+        "type": "number",
+        "default": 10,
+        "description": "Maximum memories to inject per recall"
+      },
+      "apiKey": {
+        "type": "string",
+        "description": "Optional API key for authenticated Engram instances"
+      }
+    }
+  }
+}

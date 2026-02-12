@@ -1,0 +1,45 @@
+{
+  "name": "@engram/openclaw",
+  "version": "0.1.0",
+  "description": "Local-first persistent memory for OpenClaw agents. Your data stays yours.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "openclaw",
+    "memory",
+    "ai-agent",
+    "local-first",
+    "privacy",
+    "engram",
+    "persistent-memory",
+    "moltbot",
+    "clawdbot"
+  ],
+  "author": "Engram <levent.arslan.001@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/engram-memory/engram"
+  },
+  "homepage": "https://github.com/engram-memory/engram/tree/main/integrations/openclaw",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/",
+    "openclaw.plugin.json",
+    "skills/",
+    "README.md"
+  ]
+}
