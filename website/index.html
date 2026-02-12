@@ -652,6 +652,7 @@ nav.scrolled { border-bottom-color: var(--border); }
   color: white;
 }
 .price-btn-primary:hover { opacity: 0.9; }
+.price-btn-primary:disabled { opacity: 0.6; cursor: wait; }
 
 .pricing-badge {
   display: inline-flex;
@@ -1178,7 +1179,7 @@ footer {
           <li>Analytics Dashboard</li>
           <li>Priority Email Support</li>
         </ul>
-        <button class="price-btn price-btn-primary" onclick="joinWaitlist()">Join Waitlist</button>
+        <button class="price-btn price-btn-primary" id="proCheckoutBtn" onclick="startCheckout()">Get Pro</button>
       </div>
       <!-- Enterprise -->
       <div class="price-card fade-in" style="--i:2">
@@ -1204,7 +1205,7 @@ footer {
         Open Source Core &mdash; Free. Forever.
       </div>
       <p class="waitlist-note">
-        Hosted Pro version coming soon. <a href="mailto:levent@engram-ai.dev?subject=Engram%20Pro%20Waitlist">Join the waitlist</a> for early access.
+        Pay securely via Stripe. Cancel anytime. <a href="mailto:levent@engram-ai.dev?subject=Engram%20Pro%20Question">Questions?</a>
       </p>
     </div>
   </div>
@@ -1445,10 +1446,41 @@ function switchTab(e, tabId) {
   document.getElementById(tabId).classList.add('active');
 }
 
-// Waitlist
-function joinWaitlist() {
-  window.location.href = 'mailto:levent@engram-ai.dev?subject=Engram%20Pro%20Waitlist&body=I%20want%20early%20access%20to%20Engram%20Pro.';
+// Stripe Checkout
+const ENGRAM_API = 'https://api.engram-ai.dev';
+
+function startCheckout() {
+  const btn = document.getElementById('proCheckoutBtn');
+  const origText = btn.textContent;
+  btn.textContent = 'Redirecting...';
+  btn.disabled = true;
+
+  fetch(ENGRAM_API + '/v1/billing/checkout/pro', { method: 'POST' })
+    .then(r => {
+      if (!r.ok) throw new Error('Checkout failed');
+      return r.json();
+    })
+    .then(data => {
+      window.location.href = data.checkout_url;
+    })
+    .catch(() => {
+      btn.textContent = origText;
+      btn.disabled = false;
+      alert('Something went wrong. Please try again or contact levent@engram-ai.dev');
+    });
 }
+
+// Handle checkout return
+(function handleCheckoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('checkout') === 'success') {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(135deg,#6B46C1,#06B6D4);color:#fff;text-align:center;padding:16px;font-family:Inter,sans-serif;font-weight:600;font-size:1rem;';
+    banner.innerHTML = 'Welcome to Engram Pro! Check your email for your API key. <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;margin-left:16px;cursor:pointer;font-size:1.2rem">&times;</button>';
+    document.body.prepend(banner);
+    history.replaceState({}, '', '/');
+  }
+})();
 
 // Scroll animations (IntersectionObserver)
 const observer = new IntersectionObserver((entries) => {

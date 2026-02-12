@@ -96,7 +96,28 @@ def create_checkout_session(
 
     session = stripe.checkout.Session.create(
         customer=customer_id,
-        payment_method_types=["card"],
+        line_items=[{"price": price_id, "quantity": 1}],
+        mode="subscription",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={"engram_tier": tier},
+    )
+    return session.url
+
+
+def create_public_checkout_session(
+    tier: str,
+    success_url: str,
+    cancel_url: str,
+) -> str:
+    """Create a Stripe Checkout session without a customer (landing page flow).
+
+    Stripe collects the email during checkout. The webhook creates the
+    Engram account after successful payment.
+    """
+    price_id = get_price_id(tier)
+
+    session = stripe.checkout.Session.create(
         line_items=[{"price": price_id, "quantity": 1}],
         mode="subscription",
         success_url=success_url,

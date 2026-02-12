@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 import engram
 import server.auth.dependencies as auth_deps
@@ -41,6 +42,18 @@ app = FastAPI(
     title="Engram",
     description="Memory that sticks. Universal memory layer for AI agents.",
     version=engram.__version__,
+)
+
+# CORS — allow landing page to call billing API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://engram-ai.dev",
+        "https://www.engram-ai.dev",
+        "http://localhost:3000",
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # Always register auth routes (they work in both modes).

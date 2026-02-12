@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import uuid
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from server.auth import database as db
+from server.auth.api_keys import generate_api_key
 from server.auth.dependencies import AuthUser, require_auth
+from server.auth.passwords import hash_password
 from server.billing.stripe_client import (
     create_checkout_session,
     create_customer,
     create_portal_session,
+    create_public_checkout_session,
 )
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
@@ -76,6 +82,30 @@ def checkout(body: CheckoutRequest, user: AuthUser = Depends(require_auth)):
     checkout_url = create_checkout_session(
         customer_id=customer_id,
         tier=body.tier,
+        success_url=success_url,
+        cancel_url=cancel_url,
+    )
+
+    return CheckoutResponse(checkout_url=checkout_url)
+
+
+# ------------------------------------------------------------------
+# Public Checkout — landing page flow (no auth required)
+# ------------------------------------------------------------------
+
+
+@router.post("/checkout/pro", response_model=CheckoutResponse)
+def checkout_pro():
+    """Start a Pro subscription from the landing page. No auth required.
+
+    Stripe collects email during checkout. After payment, the webhook
+    creates the Engram account and sends the API key.
+    """
+    success_url = f"{BASE_URL}/?checkout=success"
+    cancel_url = f"{BASE_URL}/?checkout=cancel"
+
+    checkout_url = create_public_checkout_session(
+        tier="pro",
         success_url=success_url,
         cancel_url=cancel_url,
     )
@@ -174,12 +204,39 @@ def _get_user_by_stripe_customer(customer_id: str) -> dict | None:
 
 
 def _handle_checkout_completed(session: dict) -> None:
-    """Activate tier after successful checkout."""
+    """Activate tier after successful checkout.
+
+    For the public landing-page flow (no pre-existing account) this
+    auto-creates an Engram user, generates an API key, and links the
+    Stripe customer.  The email with the API key is a TODO.
+    """
     customer_id = session.get("customer")
     tier = session.get("metadata", {}).get("engram_tier", "pro")
     subscription_id = session.get("subscription")
+    customer_email = session.get("customer_details", {}).get("email", "")
 
     user = _get_user_by_stripe_customer(customer_id)
+
+    if not user and customer_email:
+        # Check if a user with this email already exists
+        user = db.get_user_by_email(customer_email)
+
+        if not user:
+            # Auto-create account for landing page checkout
+            user_id = str(uuid.uuid4())
+            temp_pw = hash_password(uuid.uuid4().hex)  # unusable random password
+            user = db.create_user(user_id, customer_email, temp_pw, tier=tier)
+            log.info("Auto-created user %s for Stripe customer %s", user_id, customer_id)
+
+        # Link Stripe customer to user
+        db.update_stripe_customer_id(user["id"], customer_id)
+
+        # Generate an API key for the new user
+        key_id, full_key, key_hash = generate_api_key()
+        db.store_api_key(key_id, user["id"], key_hash, full_key[:20], name="pro-checkout")
+        log.info("Generated API key %s... for user %s", full_key[:20], user["id"])
+        # TODO: send welcome email with full_key to customer_email
+
     if user:
         db.update_user_tier(user["id"], tier)
         db.update_stripe_subscription_id(user["id"], subscription_id)
