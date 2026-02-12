@@ -101,6 +101,8 @@ Add to your MCP config:
 }
 ```
 
+**Want automatic memory recall?** Check out the [Claude Code Hook example](examples/claude-code-hook/) — every new session starts with your important memories pre-loaded, zero manual steps.
+
 ### Docker
 
 ```bash
