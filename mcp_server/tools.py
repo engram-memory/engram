@@ -111,3 +111,114 @@ TOOL_DEFINITIONS = [
         },
     },
 ]
+
+# ------------------------------------------------------------------
+# Pro Tools — Sessions, Semantic Search, Context Recovery
+# ------------------------------------------------------------------
+
+PRO_TOOL_DEFINITIONS = [
+    {
+        "name": "memory_session_save",
+        "description": "Save a session checkpoint with summary, key facts, and open tasks. Use this before ending a conversation to preserve state.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "summary": {
+                    "type": "string",
+                    "description": "Summary of what was accomplished in this session",
+                },
+                "project": {
+                    "type": "string",
+                    "description": "Project name to group sessions",
+                },
+                "key_facts": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Important facts from this session",
+                },
+                "open_tasks": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tasks that still need to be done",
+                },
+                "files_modified": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Files that were changed in this session",
+                },
+            },
+            "required": ["summary"],
+        },
+    },
+    {
+        "name": "memory_session_load",
+        "description": "Load the most recent session checkpoint. Use this at the start of a conversation to recover context.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Load checkpoint for a specific project",
+                },
+                "session_id": {
+                    "type": "string",
+                    "description": "Load a specific session by ID",
+                },
+            },
+        },
+    },
+    {
+        "name": "memory_session_list",
+        "description": "List recent sessions with their checkpoints and status.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Filter by project name",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max sessions to return",
+                    "default": 10,
+                },
+            },
+        },
+    },
+    {
+        "name": "memory_semantic_search",
+        "description": "Search memories using semantic similarity (embeddings). Finds conceptually related memories even without exact keyword matches.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language search query",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results",
+                    "default": 10,
+                },
+                "namespace": {
+                    "type": "string",
+                    "description": "Namespace to search in",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "memory_recover",
+        "description": "Recover context from the last session. Returns a formatted summary of where you left off, including key facts and open tasks.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Recover context for a specific project",
+                },
+            },
+        },
+    },
+]

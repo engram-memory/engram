@@ -11,11 +11,13 @@ from mcp.types import Resource, TextContent, Tool
 
 from engram.client import Memory
 from engram.config import EngramConfig
-from mcp_server.tools import TOOL_DEFINITIONS
+from engram.sessions import SessionManager
+from mcp_server.tools import TOOL_DEFINITIONS, PRO_TOOL_DEFINITIONS
 
 app = Server("engram")
 _config = EngramConfig()
 _memories: dict[str, Memory] = {}
+_sessions: SessionManager | None = None
 
 
 def _mem(namespace: str = "default") -> Memory:
@@ -24,13 +26,21 @@ def _mem(namespace: str = "default") -> Memory:
     return _memories[namespace]
 
 
+def _sess() -> SessionManager:
+    global _sessions
+    if _sessions is None:
+        _sessions = SessionManager(db_path=_config.db_path)
+    return _sessions
+
+
 # ------------------------------------------------------------------
 # Tools
 # ------------------------------------------------------------------
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
-    return [Tool(**td) for td in TOOL_DEFINITIONS]
+    all_tools = TOOL_DEFINITIONS + PRO_TOOL_DEFINITIONS
+    return [Tool(**td) for td in all_tools]
 
 
 @app.call_tool()
@@ -97,6 +107,62 @@ def _dispatch(name: str, args: dict) -> dict:
 
     if name == "memory_stats":
         return mem.stats(namespace=ns)
+
+    # -- Pro Tools: Sessions --
+
+    if name == "memory_session_save":
+        return _sess().save_checkpoint(
+            project=args.get("project"),
+            summary=args["summary"],
+            key_facts=args.get("key_facts"),
+            open_tasks=args.get("open_tasks"),
+            files_modified=args.get("files_modified"),
+        )
+
+    if name == "memory_session_load":
+        result = _sess().load_checkpoint(
+            project=args.get("project"),
+            session_id=args.get("session_id"),
+        )
+        if result is None:
+            return {"error": "No checkpoint found", "hint": "Save a checkpoint first with memory_session_save"}
+        return result
+
+    if name == "memory_session_list":
+        sessions = _sess().list_sessions(
+            project=args.get("project"),
+            limit=args.get("limit", 10),
+        )
+        return {"sessions": sessions, "count": len(sessions)}
+
+    # -- Pro Tools: Semantic Search --
+
+    if name == "memory_semantic_search":
+        results = mem.search(
+            args["query"],
+            limit=args.get("limit", 10),
+            namespace=ns,
+            semantic=True,
+        )
+        return {
+            "results": [
+                {
+                    "content": r.memory.content,
+                    "type": r.memory.memory_type.value,
+                    "importance": r.memory.importance,
+                    "score": r.score,
+                    "id": r.memory.id,
+                }
+                for r in results
+            ],
+            "count": len(results),
+            "method": "semantic",
+        }
+
+    # -- Pro Tools: Context Recovery --
+
+    if name == "memory_recover":
+        return {"recovery": _sess().recover_context(project=args.get("project"))}
 
     return {"error": f"Unknown tool: {name}"}
 
