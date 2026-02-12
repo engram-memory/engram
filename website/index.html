@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Engram — Memory for AI Agents</title>
 <meta name="description" content="Give your AI agents persistent memory in 5 lines of Python. Zero config. Self-hosted. Open source.">
+<meta property="og:title" content="Engram — Memory for AI Agents">
+<meta property="og:description" content="Persistent memory for AI agents. 5 lines of Python. Zero config. Self-hosted. Privacy-first.">
+<meta property="og:url" content="https://engram-ai.dev">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Engram">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Engram — Memory for AI Agents">
+<meta name="twitter:description" content="Persistent memory for AI agents. 5 lines of Python. Zero config. Self-hosted. Privacy-first.">
+<link rel="canonical" href="https://engram-ai.dev">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -724,6 +733,68 @@ nav.scrolled { border-bottom-color: var(--border); }
   line-height: 1.8;
 }
 
+/* ========== FAQ ========== */
+.faq { text-align: center; }
+
+.faq-grid {
+  max-width: 800px;
+  margin: 48px auto 0;
+  text-align: left;
+}
+
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.faq-item:hover { border-color: var(--border-glow); }
+
+.faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  gap: 16px;
+}
+.faq-question:hover { color: var(--purple-light); }
+
+.faq-chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  transition: transform 0.3s;
+}
+.faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+.faq-item.open .faq-answer {
+  max-height: 300px;
+}
+
+.faq-answer p {
+  padding: 0 24px 20px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
 /* ========== FOOTER ========== */
 footer {
   padding: 48px 0;
@@ -863,6 +934,7 @@ footer {
       <li><a href="#comparison">Compare</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#examples">Examples</a></li>
+      <li><a href="#faq">FAQ</a></li>
     </ul>
     <a href="https://github.com/leventdev/engram" class="nav-cta" target="_blank" rel="noopener">GitHub</a>
     <button class="nav-mobile-toggle" id="navToggle" aria-label="Toggle menu">&#9776;</button>
@@ -885,7 +957,7 @@ footer {
         <div class="hero-actions">
           <button class="btn-install" id="installBtn" onclick="copyInstall(this)">
             <span class="prompt">$</span>
-            <span>pip install engram-ai</span>
+            <span>pip install engram-core</span>
             <span class="copy-icon" id="copyIcon">&#x2398;</span>
           </button>
           <a href="https://github.com/leventdev/engram" class="btn-github" target="_blank" rel="noopener">
@@ -1095,9 +1167,9 @@ footer {
       <div class="price-card featured fade-in" style="--i:1">
         <div class="price-name">Pro</div>
         <div class="price-amount">
-          <span class="currency">&euro;</span>29<span class="period">/mo</span>
+          <span class="currency">&euro;</span>14<span class="period">.90/mo</span>
         </div>
-        <div class="price-desc">For teams building production AI agents.</div>
+        <div class="price-desc">For developers building production AI agents.</div>
         <ul class="price-features">
           <li>250,000 Memories</li>
           <li>25 Agent Namespaces</li>
@@ -1111,8 +1183,8 @@ footer {
       <!-- Enterprise -->
       <div class="price-card fade-in" style="--i:2">
         <div class="price-name">Enterprise</div>
-        <div class="price-amount">
-          <span class="currency">&euro;</span>299<span class="period">/mo</span>
+        <div class="price-amount" style="font-size:2rem;padding:12px 0">
+          Custom
         </div>
         <div class="price-desc">For organizations with advanced requirements.</div>
         <ul class="price-features">
@@ -1123,7 +1195,7 @@ footer {
           <li>Dedicated Support</li>
           <li>SLA Guarantee</li>
         </ul>
-        <button class="price-btn price-btn-outline" onclick="joinWaitlist()">Contact Sales</button>
+        <a href="mailto:levent@engram-ai.dev?subject=Engram%20Enterprise" class="price-btn price-btn-outline">Contact Sales</a>
       </div>
     </div>
     <div class="fade-in" style="margin-top:48px">
@@ -1132,7 +1204,7 @@ footer {
         Open Source Core &mdash; Free. Forever.
       </div>
       <p class="waitlist-note">
-        Cloud hosted version coming soon. <a href="mailto:levent@engram.dev">Join the waitlist</a> to get early access.
+        Hosted Pro version coming soon. <a href="mailto:levent@engram-ai.dev?subject=Engram%20Pro%20Waitlist">Join the waitlist</a> for early access.
       </p>
     </div>
   </div>
@@ -1259,6 +1331,54 @@ footer {
   </div>
 </section>
 
+<!-- ==================== FAQ ==================== -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="fade-in">
+      <p class="section-label">FAQ</p>
+      <h2 class="section-title">Common <span class="gradient-text">questions.</span></h2>
+    </div>
+    <div class="faq-grid fade-in">
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          What exactly gets stored?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Text-based memories &mdash; facts, preferences, decisions, error fixes, patterns. Each memory has content, tags, an importance score (1&ndash;10), and a type. Everything is stored in a local SQLite database on your machine. No images, no binaries &mdash; just the context your agents need.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Do I need powerful hardware?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="faq-answer">
+          <p>No. Engram runs on SQLite with full-text search (FTS5) &mdash; it works on a Raspberry Pi. Memory recall is sub-millisecond for typical workloads. Optional semantic search with embeddings needs more resources, but the core runs anywhere Python runs.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Is my data secure?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Your data never leaves your machine. Engram is local-first by design &mdash; no cloud, no telemetry, no third-party services. The database is a single file on your disk. You control it completely. The entire codebase is MIT-licensed and open for audit.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Where do the agents run?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Engram is the memory layer, not the agent runtime. Your agents run wherever you want &mdash; Claude Code, Cursor, custom scripts, LangChain, CrewAI. Engram just gives them persistent memory via a Python SDK, REST API, or MCP server. Think of it as a database your agents can remember with.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== FOOTER ==================== -->
 <footer>
   <div class="container">
@@ -1270,7 +1390,7 @@ footer {
         </a>
         <ul class="footer-links">
           <li><a href="https://github.com/leventdev/engram" target="_blank" rel="noopener">GitHub</a></li>
-          <li><a href="https://pypi.org/project/engram-ai/" target="_blank" rel="noopener">PyPI</a></li>
+          <li><a href="https://pypi.org/project/engram-core/" target="_blank" rel="noopener">PyPI</a></li>
           <li><a href="#" title="Coming soon">Docs</a></li>
         </ul>
       </div>
@@ -1305,7 +1425,7 @@ document.querySelectorAll('.nav-links a').forEach(link => {
 
 // Copy install command
 function copyInstall(btn) {
-  navigator.clipboard.writeText('pip install engram-ai').then(() => {
+  navigator.clipboard.writeText('pip install engram-core').then(() => {
     btn.classList.add('copied');
     const icon = btn.querySelector('.copy-icon');
     const orig = icon.innerHTML;
@@ -1327,7 +1447,7 @@ function switchTab(e, tabId) {
 
 // Waitlist
 function joinWaitlist() {
-  window.location.href = 'mailto:levent@engram.dev?subject=Engram%20Cloud%20Waitlist&body=I%20want%20early%20access%20to%20Engram%20Cloud.';
+  window.location.href = 'mailto:levent@engram-ai.dev?subject=Engram%20Pro%20Waitlist&body=I%20want%20early%20access%20to%20Engram%20Pro.';
 }
 
 // Scroll animations (IntersectionObserver)
@@ -1340,6 +1460,12 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// FAQ accordion
+function toggleFaq(btn) {
+  const item = btn.parentElement;
+  item.classList.toggle('open');
+}
 </script>
 
 </body>
