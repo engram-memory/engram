@@ -6,6 +6,8 @@ import pytest
 
 from engram.config import EngramConfig
 
+mcp = pytest.importorskip("mcp", reason="mcp package not installed")
+
 
 @pytest.fixture(autouse=True)
 def _isolate(tmp_path: Path, monkeypatch):

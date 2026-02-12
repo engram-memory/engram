@@ -41,7 +41,7 @@ jobs:
           cache: pip
 
       - name: Install package with dev dependencies
-        run: pip install -e ".[dev,server]"
+        run: pip install -e ".[dev,server,mcp]"
 
       - name: Run tests
         run: pytest --tb=short -q
