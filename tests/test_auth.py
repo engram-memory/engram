@@ -1,6 +1,5 @@
 """Tests for the authentication system."""
 
-import os
 from pathlib import Path
 
 import pytest
@@ -154,62 +153,96 @@ class TestCloudAuth:
         db.init_admin_db()
 
         import server.auth.dependencies as deps
+
         deps.CLOUD_MODE = True
 
         import server.api as api_mod
+
         api_mod._memories.clear()
         api_mod._DATA_DIR = tmp_path / "data"
 
     @pytest.fixture()
     def client(self):
-        from server.api import app
         from fastapi.testclient import TestClient
+
+        from server.api import app
 
         return TestClient(app)
 
     def test_register(self, client):
-        r = client.post("/v1/auth/register", json={
-            "email": "new@test.com",
-            "password": "securepass123",
-        })
+        r = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "new@test.com",
+                "password": "securepass123",
+            },
+        )
         assert r.status_code == 200
         data = r.json()
         assert "access_token" in data
         assert "refresh_token" in data
 
     def test_register_duplicate(self, client):
-        client.post("/v1/auth/register", json={
-            "email": "dup@test.com", "password": "securepass123",
-        })
-        r = client.post("/v1/auth/register", json={
-            "email": "dup@test.com", "password": "otherpass123",
-        })
+        client.post(
+            "/v1/auth/register",
+            json={
+                "email": "dup@test.com",
+                "password": "securepass123",
+            },
+        )
+        r = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "dup@test.com",
+                "password": "otherpass123",
+            },
+        )
         assert r.status_code == 409
 
     def test_login(self, client):
-        client.post("/v1/auth/register", json={
-            "email": "login@test.com", "password": "securepass123",
-        })
-        r = client.post("/v1/auth/login", json={
-            "email": "login@test.com", "password": "securepass123",
-        })
+        client.post(
+            "/v1/auth/register",
+            json={
+                "email": "login@test.com",
+                "password": "securepass123",
+            },
+        )
+        r = client.post(
+            "/v1/auth/login",
+            json={
+                "email": "login@test.com",
+                "password": "securepass123",
+            },
+        )
         assert r.status_code == 200
         assert "access_token" in r.json()
 
     def test_login_wrong_password(self, client):
-        client.post("/v1/auth/register", json={
-            "email": "wrong@test.com", "password": "securepass123",
-        })
-        r = client.post("/v1/auth/login", json={
-            "email": "wrong@test.com", "password": "wrongpass",
-        })
+        client.post(
+            "/v1/auth/register",
+            json={
+                "email": "wrong@test.com",
+                "password": "securepass123",
+            },
+        )
+        r = client.post(
+            "/v1/auth/login",
+            json={
+                "email": "wrong@test.com",
+                "password": "wrongpass",
+            },
+        )
         assert r.status_code == 401
 
     def test_authenticated_memory_operations(self, client):
         # Register and get token
-        r = client.post("/v1/auth/register", json={
-            "email": "mem@test.com", "password": "securepass123",
-        })
+        r = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "mem@test.com",
+                "password": "securepass123",
+            },
+        )
         token = r.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
@@ -233,27 +266,37 @@ class TestCloudAuth:
 
     def test_api_key_auth(self, client):
         # Register
-        r = client.post("/v1/auth/register", json={
-            "email": "apikey@test.com", "password": "securepass123",
-        })
+        r = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "apikey@test.com",
+                "password": "securepass123",
+            },
+        )
         token = r.json()["access_token"]
 
         # Create API key
-        r = client.post("/v1/auth/keys", json={"name": "test-key"},
-                        headers={"Authorization": f"Bearer {token}"})
+        r = client.post(
+            "/v1/auth/keys", json={"name": "test-key"}, headers={"Authorization": f"Bearer {token}"}
+        )
         assert r.status_code == 200
         api_key = r.json()["key"]
         assert api_key.startswith("engram_sk_")
 
         # Use API key for memory operations
-        r = client.post("/v1/memories", json={"content": "via api key"},
-                        headers={"X-API-Key": api_key})
+        r = client.post(
+            "/v1/memories", json={"content": "via api key"}, headers={"X-API-Key": api_key}
+        )
         assert r.status_code == 200
 
     def test_refresh_token(self, client):
-        r = client.post("/v1/auth/register", json={
-            "email": "refresh@test.com", "password": "securepass123",
-        })
+        r = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "refresh@test.com",
+                "password": "securepass123",
+            },
+        )
         refresh = r.json()["refresh_token"]
 
         r = client.post("/v1/auth/refresh", json={"refresh_token": refresh})
@@ -262,20 +305,30 @@ class TestCloudAuth:
 
     def test_tenant_isolation(self, client):
         # Register two users
-        r1 = client.post("/v1/auth/register", json={
-            "email": "user1@test.com", "password": "securepass123",
-        })
-        r2 = client.post("/v1/auth/register", json={
-            "email": "user2@test.com", "password": "securepass123",
-        })
+        r1 = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "user1@test.com",
+                "password": "securepass123",
+            },
+        )
+        r2 = client.post(
+            "/v1/auth/register",
+            json={
+                "email": "user2@test.com",
+                "password": "securepass123",
+            },
+        )
         token1 = r1.json()["access_token"]
         token2 = r2.json()["access_token"]
 
         # User1 stores a memory
-        client.post("/v1/memories", json={"content": "user1 secret"},
-                    headers={"Authorization": f"Bearer {token1}"})
+        client.post(
+            "/v1/memories",
+            json={"content": "user1 secret"},
+            headers={"Authorization": f"Bearer {token1}"},
+        )
 
         # User2 should NOT see it
-        r = client.get("/v1/memories",
-                       headers={"Authorization": f"Bearer {token2}"})
+        r = client.get("/v1/memories", headers={"Authorization": f"Bearer {token2}"})
         assert len(r.json()) == 0

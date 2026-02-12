@@ -6,6 +6,7 @@ import os
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
@@ -15,11 +16,14 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 
 import engram
+import server.auth.dependencies as auth_deps
 from engram.client import Memory
 from engram.config import EngramConfig
-from engram.exceptions import MemoryNotFound
-import server.auth.dependencies as auth_deps
+from engram.exceptions import MemoryNotFoundError
+from server.auth.database import init_admin_db
 from server.auth.dependencies import AuthUser, get_namespace, require_auth
+from server.auth.routes import router as auth_router
+from server.billing.routes import router as billing_router
 from server.models import (
     ExportRequest,
     HealthResponse,
@@ -41,13 +45,8 @@ app = FastAPI(
 
 # Always register auth routes (they work in both modes).
 # Cloud-specific middleware only loads when auth_deps.CLOUD_MODE is active.
-from server.auth.database import init_admin_db
-from server.auth.routes import router as auth_router
-
 init_admin_db()
 app.include_router(auth_router)
-
-from server.billing.routes import router as billing_router
 app.include_router(billing_router)
 
 if auth_deps.CLOUD_MODE:
@@ -100,13 +99,13 @@ def _check_namespace_limit(user: AuthUser, namespace: str, mem: Memory) -> None:
         return
     # Quick check: count distinct namespaces in the user's DB
     import sqlite3
+
     try:
         conn = sqlite3.connect(str(mem._config.db_path))
         row = conn.execute("SELECT COUNT(DISTINCT namespace) AS cnt FROM memories").fetchone()
         conn.close()
         if row and row[0] >= limits.max_namespaces:
             # Only block if the namespace is new
-            row2 = conn if False else None  # already closed
             conn2 = sqlite3.connect(str(mem._config.db_path))
             exists = conn2.execute(
                 "SELECT 1 FROM memories WHERE namespace = ? LIMIT 1", (namespace,)
@@ -142,10 +141,15 @@ def _check_websocket(user: AuthUser) -> None:
 # Inject auth user into request state for middleware
 # ------------------------------------------------------------------
 
+
 @app.middleware("http")
 async def inject_auth_user(request: Request, call_next):
     """Make auth user available in request.state for rate limit middleware."""
-    if auth_deps.CLOUD_MODE and not request.url.path.startswith("/v1/auth") and request.url.path != "/v1/health":
+    if (
+        auth_deps.CLOUD_MODE
+        and not request.url.path.startswith("/v1/auth")
+        and request.url.path != "/v1/health"
+    ):
         try:
             user = require_auth(request)
             request.state.auth_user = user
@@ -159,18 +163,18 @@ async def inject_auth_user(request: Request, call_next):
 # Health
 # ------------------------------------------------------------------
 
+
 @app.get("/v1/health", response_model=HealthResponse)
 def health():
     m = Memory(config=EngramConfig(db_path=_DATA_DIR / "memory.db"), namespace="default")
     s = m.stats()
-    return HealthResponse(
-        status="ok", version=engram.__version__, memories=s["total_memories"]
-    )
+    return HealthResponse(status="ok", version=engram.__version__, memories=s["total_memories"])
 
 
 # ------------------------------------------------------------------
 # CRUD
 # ------------------------------------------------------------------
+
 
 @app.post("/v1/memories", response_model=StoreResponse)
 async def store_memory(
@@ -201,7 +205,7 @@ def get_memory(
 ):
     try:
         return _mem(user, namespace).get(memory_id).model_dump(mode="json", exclude={"embedding"})
-    except MemoryNotFound:
+    except MemoryNotFoundError:
         raise HTTPException(404, "Memory not found")
 
 
@@ -240,7 +244,7 @@ async def update_memory(
         fields["metadata"] = body.metadata
     try:
         entry = _mem(user, namespace).update(memory_id, **fields)
-    except MemoryNotFound:
+    except MemoryNotFoundError:
         raise HTTPException(404, "Memory not found")
     await manager.broadcast(namespace, "memory_updated", {"id": memory_id})
     return entry.model_dump(mode="json", exclude={"embedding"})
@@ -261,6 +265,7 @@ async def delete_memory(
 # ------------------------------------------------------------------
 # Search / Recall
 # ------------------------------------------------------------------
+
 
 @app.post("/v1/search")
 def search_memories(
@@ -303,6 +308,7 @@ def recall_memories(
 # Stats / Export / Import
 # ------------------------------------------------------------------
 
+
 @app.get("/v1/stats", response_model=StatsResponse)
 def get_stats(
     user: AuthUser = Depends(require_auth),
@@ -338,6 +344,7 @@ def import_memories(
 # WebSocket
 # ------------------------------------------------------------------
 
+
 @app.websocket("/v1/ws/{namespace}")
 async def ws_endpoint(websocket: WebSocket, namespace: str):
     await manager.connect(websocket, namespace)
@@ -351,6 +358,7 @@ async def ws_endpoint(websocket: WebSocket, namespace: str):
 # ------------------------------------------------------------------
 # Entrypoint
 # ------------------------------------------------------------------
+
 
 def run():
     import uvicorn

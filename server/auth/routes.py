@@ -18,7 +18,6 @@ from server.auth.models import (
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
-    UserInfo,
     UserWithLimits,
 )
 from server.auth.passwords import hash_password, verify_password
@@ -88,6 +87,7 @@ def refresh(body: RefreshRequest):
 # User info
 # ------------------------------------------------------------------
 
+
 @router.get("/me", response_model=UserWithLimits)
 def get_me(user: AuthUser = Depends(require_auth)):
     tier = get_tier(user.tier)
@@ -111,6 +111,7 @@ def get_me(user: AuthUser = Depends(require_auth)):
 # ------------------------------------------------------------------
 # API Keys
 # ------------------------------------------------------------------
+
 
 @router.post("/keys", response_model=ApiKeyResponse)
 def create_key(body: CreateApiKeyRequest, user: AuthUser = Depends(require_auth)):

@@ -1,13 +1,12 @@
 """Tests for the Memory client (store / search / recall / delete)."""
 
-import tempfile
 from pathlib import Path
 
 import pytest
 
-from engram import Memory, MemoryEntry
+from engram import Memory
 from engram.config import EngramConfig
-from engram.exceptions import MemoryNotFound
+from engram.exceptions import MemoryNotFoundError
 
 
 @pytest.fixture()
@@ -19,6 +18,7 @@ def mem(tmp_path: Path) -> Memory:
 # ------------------------------------------------------------------
 # Store
 # ------------------------------------------------------------------
+
 
 class TestStore:
     def test_store_returns_id(self, mem: Memory):
@@ -48,6 +48,7 @@ class TestStore:
 # Search
 # ------------------------------------------------------------------
 
+
 class TestSearch:
     def test_search_finds_stored_memory(self, mem: Memory):
         mem.store("User prefers dark mode", type="preference", importance=8)
@@ -74,6 +75,7 @@ class TestSearch:
 # Recall
 # ------------------------------------------------------------------
 
+
 class TestRecall:
     def test_recall_returns_high_importance(self, mem: Memory):
         mem.store("low importance item", type="fact", importance=2)
@@ -93,6 +95,7 @@ class TestRecall:
 # Get / Delete / Update
 # ------------------------------------------------------------------
 
+
 class TestCRUD:
     def test_get_existing(self, mem: Memory):
         mid = mem.store("test entry")
@@ -101,13 +104,13 @@ class TestCRUD:
         assert entry.id == mid
 
     def test_get_nonexistent_raises(self, mem: Memory):
-        with pytest.raises(MemoryNotFound):
+        with pytest.raises(MemoryNotFoundError):
             mem.get(99999)
 
     def test_delete(self, mem: Memory):
         mid = mem.store("to be deleted")
         assert mem.delete(mid) is True
-        with pytest.raises(MemoryNotFound):
+        with pytest.raises(MemoryNotFoundError):
             mem.get(mid)
 
     def test_delete_nonexistent(self, mem: Memory):
@@ -119,13 +122,14 @@ class TestCRUD:
         assert updated.importance == 9
 
     def test_update_nonexistent_raises(self, mem: Memory):
-        with pytest.raises(MemoryNotFound):
+        with pytest.raises(MemoryNotFoundError):
             mem.update(99999, importance=1)
 
 
 # ------------------------------------------------------------------
 # List / Stats / Export / Import
 # ------------------------------------------------------------------
+
 
 class TestListStatsExportImport:
     def test_list(self, mem: Memory):

@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from fastapi import HTTPException, Request
 
-
-_API_KEY: Optional[str] = os.environ.get("ENGRAM_API_KEY")
+_API_KEY: str | None = os.environ.get("ENGRAM_API_KEY")
 
 
 def verify_api_key(request: Request) -> None:

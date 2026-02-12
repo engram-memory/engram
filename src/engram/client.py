@@ -9,7 +9,7 @@ from typing import Any
 
 from engram.config import EngramConfig
 from engram.core.types import MemoryEntry, MemoryType, SearchResult
-from engram.exceptions import MemoryNotFound
+from engram.exceptions import MemoryNotFoundError
 from engram.storage.sqlite_backend import SQLiteBackend
 
 
@@ -103,7 +103,7 @@ class Memory:
         """Fetch a single memory by id."""
         entry = self._backend.get(memory_id)
         if entry is None:
-            raise MemoryNotFound(memory_id)
+            raise MemoryNotFoundError(memory_id)
         return entry
 
     def delete(self, memory_id: int) -> bool:
@@ -114,7 +114,7 @@ class Memory:
         """Partial update of a memory's fields."""
         entry = self._backend.update(memory_id, **fields)
         if entry is None:
-            raise MemoryNotFound(memory_id)
+            raise MemoryNotFoundError(memory_id)
         return entry
 
     def list(
@@ -151,8 +151,6 @@ class Memory:
 
         cutoff = datetime.utcnow() - timedelta(days=days)
         ns = namespace or self._namespace
-
-        import sqlite3
 
         with self._backend._conn() as conn:
             cur = conn.execute(

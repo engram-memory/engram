@@ -26,6 +26,7 @@ BASE_URL = os.environ.get("ENGRAM_BASE_URL", "https://engram-ai.dev")
 # Request/Response models
 # ------------------------------------------------------------------
 
+
 class CheckoutRequest(BaseModel):
     tier: str  # "pro" or "enterprise"
     success_url: str | None = None
@@ -50,6 +51,7 @@ class BillingStatus(BaseModel):
 # Checkout — user starts a subscription
 # ------------------------------------------------------------------
 
+
 @router.post("/checkout", response_model=CheckoutResponse)
 def checkout(body: CheckoutRequest, user: AuthUser = Depends(require_auth)):
     if body.tier not in ("pro", "enterprise"):
@@ -66,7 +68,9 @@ def checkout(body: CheckoutRequest, user: AuthUser = Depends(require_auth)):
         customer_id = create_customer(user.email, user.id)
         db.update_stripe_customer_id(user.id, customer_id)
 
-    success_url = body.success_url or f"{BASE_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
+    success_url = (
+        body.success_url or f"{BASE_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
+    )
     cancel_url = body.cancel_url or f"{BASE_URL}/billing/cancel"
 
     checkout_url = create_checkout_session(
@@ -82,6 +86,7 @@ def checkout(body: CheckoutRequest, user: AuthUser = Depends(require_auth)):
 # ------------------------------------------------------------------
 # Customer Portal — manage subscription
 # ------------------------------------------------------------------
+
 
 @router.post("/portal", response_model=PortalResponse)
 def portal(user: AuthUser = Depends(require_auth)):
@@ -101,6 +106,7 @@ def portal(user: AuthUser = Depends(require_auth)):
 # Billing status
 # ------------------------------------------------------------------
 
+
 @router.get("/status", response_model=BillingStatus)
 def billing_status(user: AuthUser = Depends(require_auth)):
     user_record = db.get_user_by_id(user.id)
@@ -115,6 +121,7 @@ def billing_status(user: AuthUser = Depends(require_auth)):
 # Stripe Webhook — handle subscription events
 # ------------------------------------------------------------------
 
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request):
     payload = await request.body()
@@ -128,6 +135,7 @@ async def stripe_webhook(request: Request):
     else:
         # Dev/test mode: parse without signature verification
         import json
+
         event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
 
     event_type = event["type"]
@@ -158,6 +166,7 @@ async def stripe_webhook(request: Request):
 # ------------------------------------------------------------------
 # Webhook handlers
 # ------------------------------------------------------------------
+
 
 def _get_user_by_stripe_customer(customer_id: str) -> dict | None:
     """Look up Engram user by Stripe customer ID."""

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 
 import jwt
 
@@ -39,7 +39,7 @@ def create_refresh_token(user_id: str) -> str:
     return jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
 
 
-def decode_token(token: str) -> Optional[dict[str, Any]]:
+def decode_token(token: str) -> dict[str, Any] | None:
     """Decode and validate a JWT. Returns payload or None."""
     try:
         return jwt.decode(token, _SECRET, algorithms=[_ALGORITHM])

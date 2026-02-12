@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import os
 
-
 _ITERATIONS = 600_000  # OWASP recommended minimum for PBKDF2-SHA256
 _SALT_LENGTH = 32
 _HASH_LENGTH = 32

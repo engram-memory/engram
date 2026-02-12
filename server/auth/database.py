@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
 
 _DB_PATH = Path.home() / ".engram" / "admin.db"
 
@@ -71,6 +69,7 @@ def init_admin_db() -> None:
 # Users
 # ------------------------------------------------------------------
 
+
 def create_user(user_id: str, email: str, password_hash: str, tier: str = "free") -> dict:
     with _conn() as c:
         c.execute(
@@ -81,13 +80,13 @@ def create_user(user_id: str, email: str, password_hash: str, tier: str = "free"
     return get_user_by_id(user_id)
 
 
-def get_user_by_email(email: str) -> Optional[dict]:
+def get_user_by_email(email: str) -> dict | None:
     with _conn() as c:
         row = c.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
         return dict(row) if row else None
 
 
-def get_user_by_id(user_id: str) -> Optional[dict]:
+def get_user_by_id(user_id: str) -> dict | None:
     with _conn() as c:
         row = c.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         return dict(row) if row else None
@@ -116,19 +115,24 @@ def update_stripe_customer_id(user_id: str, customer_id: str) -> None:
 
 def update_stripe_subscription_id(user_id: str, subscription_id: str | None) -> None:
     with _conn() as c:
-        c.execute("UPDATE users SET stripe_subscription_id = ? WHERE id = ?", (subscription_id, user_id))
+        c.execute(
+            "UPDATE users SET stripe_subscription_id = ? WHERE id = ?", (subscription_id, user_id)
+        )
         c.commit()
 
 
-def get_user_by_stripe_customer_id(customer_id: str) -> Optional[dict]:
+def get_user_by_stripe_customer_id(customer_id: str) -> dict | None:
     with _conn() as c:
-        row = c.execute("SELECT * FROM users WHERE stripe_customer_id = ?", (customer_id,)).fetchone()
+        row = c.execute(
+            "SELECT * FROM users WHERE stripe_customer_id = ?", (customer_id,)
+        ).fetchone()
         return dict(row) if row else None
 
 
 # ------------------------------------------------------------------
 # API Keys
 # ------------------------------------------------------------------
+
 
 def store_api_key(
     key_id: str,
@@ -141,13 +145,14 @@ def store_api_key(
     scopes_str = json.dumps(scopes or ["memories:read", "memories:write"])
     with _conn() as c:
         c.execute(
-            "INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name, scopes) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name, scopes) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (key_id, user_id, key_hash, key_prefix, name, scopes_str),
         )
         c.commit()
 
 
-def get_api_key_by_hash(key_hash: str) -> Optional[dict]:
+def get_api_key_by_hash(key_hash: str) -> dict | None:
     with _conn() as c:
         row = c.execute("SELECT * FROM api_keys WHERE key_hash = ?", (key_hash,)).fetchone()
         if row is None:
@@ -173,7 +178,9 @@ def get_api_keys_for_user(user_id: str) -> list[dict]:
 
 def count_api_keys_for_user(user_id: str) -> int:
     with _conn() as c:
-        row = c.execute("SELECT COUNT(*) AS cnt FROM api_keys WHERE user_id = ?", (user_id,)).fetchone()
+        row = c.execute(
+            "SELECT COUNT(*) AS cnt FROM api_keys WHERE user_id = ?", (user_id,)
+        ).fetchone()
         return row["cnt"]
 
 

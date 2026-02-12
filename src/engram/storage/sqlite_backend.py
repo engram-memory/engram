@@ -11,7 +11,6 @@ from typing import Any
 from engram.core.dedup import content_hash
 from engram.core.search import sanitize_fts_query
 from engram.core.types import MemoryEntry, MemoryType, SearchResult
-from engram.exceptions import StorageError
 
 
 class SQLiteBackend:
@@ -107,7 +106,8 @@ class SQLiteBackend:
                     """
                     INSERT INTO memories
                         (content, memory_type, importance, namespace, tags, metadata,
-                         content_hash, embedding, decay_score, created_at, accessed_at, access_count)
+                         content_hash, embedding, decay_score,
+                         created_at, accessed_at, access_count)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
@@ -151,7 +151,8 @@ class SQLiteBackend:
                 return None
             # Touch access
             conn.execute(
-                "UPDATE memories SET access_count = access_count + 1, accessed_at = CURRENT_TIMESTAMP WHERE id = ?",
+                "UPDATE memories SET access_count = access_count + 1, "
+                "accessed_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (memory_id,),
             )
             conn.commit()
@@ -239,9 +240,7 @@ class SQLiteBackend:
 
         with self._conn() as conn:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                f"SELECT * FROM memories {ns_filter}", params
-            ).fetchall()
+            rows = conn.execute(f"SELECT * FROM memories {ns_filter}", params).fetchall()
 
         results: list[SearchResult] = []
         for r in rows:
@@ -249,9 +248,7 @@ class SQLiteBackend:
             if stored is None:
                 continue
             sim = _cosine_similarity(embedding, stored)
-            results.append(
-                SearchResult(memory=_row_to_entry(r), score=sim, match_type="semantic")
-            )
+            results.append(SearchResult(memory=_row_to_entry(r), score=sim, match_type="semantic"))
         results.sort(key=lambda x: x.score, reverse=True)
         return results[:limit]
 
@@ -283,7 +280,8 @@ class SQLiteBackend:
         with self._conn() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                f"SELECT * FROM memories {where} ORDER BY importance DESC, accessed_at DESC LIMIT ? OFFSET ?",
+                f"SELECT * FROM memories {where} "
+                "ORDER BY importance DESC, accessed_at DESC LIMIT ? OFFSET ?",
                 params,
             ).fetchall()
             return [_row_to_entry(r) for r in rows]
@@ -300,8 +298,13 @@ class SQLiteBackend:
             return None
 
         allowed = {
-            "content", "memory_type", "importance", "namespace",
-            "tags", "metadata", "decay_score",
+            "content",
+            "memory_type",
+            "importance",
+            "namespace",
+            "tags",
+            "metadata",
+            "decay_score",
         }
         sets: list[str] = []
         params: list[Any] = []
@@ -350,13 +353,17 @@ class SQLiteBackend:
             ).fetchone()["count"]
 
             by_type = conn.execute(
-                f"SELECT memory_type, COUNT(*) AS count FROM memories {ns_filter} GROUP BY memory_type",
+                f"SELECT memory_type, COUNT(*) AS count FROM memories "
+                f"{ns_filter} GROUP BY memory_type",
                 params,
             ).fetchall()
 
-            avg_imp = conn.execute(
-                f"SELECT AVG(importance) AS avg FROM memories {ns_filter}", params
-            ).fetchone()["avg"] or 0
+            avg_imp = (
+                conn.execute(
+                    f"SELECT AVG(importance) AS avg FROM memories {ns_filter}", params
+                ).fetchone()["avg"]
+                or 0
+            )
 
             db_size = self.db_path.stat().st_size / (1024 * 1024) if self.db_path.exists() else 0
 
@@ -400,6 +407,7 @@ class SQLiteBackend:
 # Helpers
 # ------------------------------------------------------------------
 
+
 def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
     tags = json.loads(row["tags"]) if row["tags"] else []
     metadata = json.loads(row["metadata"]) if row["metadata"] else {}
@@ -436,6 +444,7 @@ def _encode_embedding(emb: list[float] | None) -> bytes | None:
     if emb is None:
         return None
     import struct
+
     return struct.pack(f"{len(emb)}f", *emb)
 
 
@@ -443,6 +452,7 @@ def _decode_embedding(blob: bytes | None) -> list[float] | None:
     if blob is None:
         return None
     import struct
+
     n = len(blob) // 4
     return list(struct.unpack(f"{n}f", blob))
 

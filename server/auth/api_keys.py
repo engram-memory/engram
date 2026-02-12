@@ -5,10 +5,8 @@ from __future__ import annotations
 import hashlib
 import secrets
 import uuid
-from typing import Optional
 
 from server.auth import database as db
-
 
 _PREFIX = "engram_sk_"
 
@@ -26,7 +24,7 @@ def hash_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-def validate_api_key(key: str) -> Optional[dict]:
+def validate_api_key(key: str) -> dict | None:
     """Validate an API key. Returns the key record with user info, or None."""
     if not key.startswith(_PREFIX):
         return None

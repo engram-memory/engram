@@ -5,9 +5,9 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 
 class MemoryType(str, Enum):
@@ -26,15 +26,15 @@ class MemoryType(str, Enum):
 class MemoryEntry(BaseModel):
     """A single memory unit."""
 
-    id: Optional[int] = None
+    id: int | None = None
     content: str
     memory_type: MemoryType = MemoryType.fact
     importance: int = Field(default=5, ge=1, le=10)
     namespace: str = "default"
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
-    content_hash: Optional[str] = None
-    embedding: Optional[list[float]] = None
+    content_hash: str | None = None
+    embedding: list[float] | None = None
     decay_score: float = Field(default=1.0, ge=0.0, le=1.0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     accessed_at: datetime = Field(default_factory=datetime.utcnow)

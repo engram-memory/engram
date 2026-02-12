@@ -1,6 +1,5 @@
 """Tests for MCP server tool dispatch logic (no actual MCP transport)."""
 
-import tempfile
 from pathlib import Path
 
 import pytest

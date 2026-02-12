@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,4 +19,4 @@ class EngramConfig(BaseModel):
     default_namespace: str = "default"
     auto_decay: bool = False
     decay_rate: float = Field(default=0.01, ge=0.0, le=1.0)
-    api_key: Optional[str] = None
+    api_key: str | None = None

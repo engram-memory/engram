@@ -5,7 +5,7 @@ class EngramError(Exception):
     """Base exception for all Engram errors."""
 
 
-class MemoryNotFound(EngramError):
+class MemoryNotFoundError(EngramError):
     """Raised when a memory ID does not exist."""
 
     def __init__(self, memory_id: int):
@@ -13,7 +13,7 @@ class MemoryNotFound(EngramError):
         super().__init__(f"Memory #{memory_id} not found")
 
 
-class DuplicateMemory(EngramError):
+class DuplicateMemoryError(EngramError):
     """Raised when storing a memory that already exists (content hash collision)."""
 
     def __init__(self, content_hash: str):

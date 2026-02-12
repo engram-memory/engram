@@ -25,12 +25,14 @@ class ContextExtractor:
                 for pattern in patterns:
                     if re.search(pattern, sentence, re.IGNORECASE):
                         importance = self._calculate_importance(sentence, mem_type)
-                        extracted.append({
-                            "type": mem_type,
-                            "content": sentence,
-                            "importance": importance,
-                            "project": project,
-                        })
+                        extracted.append(
+                            {
+                                "type": mem_type,
+                                "content": sentence,
+                                "importance": importance,
+                                "project": project,
+                            }
+                        )
                         break  # one match per sentence
                 else:
                     continue

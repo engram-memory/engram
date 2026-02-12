@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 from fastapi import HTTPException, Request
 
@@ -15,12 +14,13 @@ from server.tiers import TierLimits, get_tier
 CLOUD_MODE = os.environ.get("ENGRAM_CLOUD_MODE", "").lower() in ("1", "true", "yes")
 
 # Legacy single API key for local mode
-_LEGACY_API_KEY: Optional[str] = os.environ.get("ENGRAM_API_KEY")
+_LEGACY_API_KEY: str | None = os.environ.get("ENGRAM_API_KEY")
 
 
 @dataclass
 class AuthUser:
     """Authenticated user context."""
+
     id: str
     email: str
     tier: str

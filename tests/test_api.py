@@ -1,7 +1,5 @@
 """Tests for the FastAPI REST server."""
 
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
