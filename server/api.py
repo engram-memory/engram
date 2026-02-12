@@ -21,6 +21,7 @@ import server.auth.dependencies as auth_deps
 from engram.client import Memory
 from engram.config import EngramConfig
 from engram.exceptions import MemoryNotFoundError
+from engram.sessions import SessionManager
 from server.auth.database import init_admin_db
 from server.auth.dependencies import AuthUser, get_namespace, require_auth
 from server.auth.routes import router as auth_router
@@ -31,6 +32,8 @@ from server.models import (
     ImportRequest,
     RecallRequest,
     SearchRequest,
+    SessionRecoverRequest,
+    SessionSaveRequest,
     StatsResponse,
     StoreRequest,
     StoreResponse,
@@ -351,6 +354,81 @@ def import_memories(
 ):
     count = _mem(user, namespace).import_memories(body.data)
     return {"imported": count}
+
+
+# ------------------------------------------------------------------
+# Sessions (Pro)
+# ------------------------------------------------------------------
+
+_session_managers: dict[str, SessionManager] = {}
+
+
+def _sess(user: AuthUser) -> SessionManager:
+    """Return a SessionManager scoped to the user."""
+    if auth_deps.CLOUD_MODE:
+        db_path = _DATA_DIR / "tenants" / user.id / "memory.db"
+    else:
+        db_path = _DATA_DIR / "memory.db"
+    if user.id not in _session_managers:
+        _session_managers[user.id] = SessionManager(db_path=db_path)
+    return _session_managers[user.id]
+
+
+def _check_pro(user: AuthUser) -> None:
+    """Raise 403 if user is not on Pro or Enterprise tier."""
+    if user.tier not in ("pro", "enterprise"):
+        raise HTTPException(
+            403,
+            "Sessions are a Pro feature. Upgrade at https://engram-ai.dev/#pricing",
+        )
+
+
+@app.post("/v1/sessions/save")
+def session_save(
+    body: SessionSaveRequest,
+    user: AuthUser = Depends(require_auth),
+):
+    _check_pro(user)
+    return _sess(user).save_checkpoint(
+        project=body.project,
+        summary=body.summary,
+        key_facts=body.key_facts or None,
+        open_tasks=body.open_tasks or None,
+        files_modified=body.files_modified or None,
+    )
+
+
+@app.get("/v1/sessions/latest")
+def session_load(
+    user: AuthUser = Depends(require_auth),
+    project: str | None = Query(None),
+    session_id: str | None = Query(None),
+):
+    _check_pro(user)
+    result = _sess(user).load_checkpoint(project=project, session_id=session_id)
+    if result is None:
+        raise HTTPException(404, "No checkpoint found. Save one first with POST /v1/sessions/save")
+    return result
+
+
+@app.get("/v1/sessions")
+def session_list(
+    user: AuthUser = Depends(require_auth),
+    project: str | None = Query(None),
+    limit: int = Query(10, ge=1, le=100),
+):
+    _check_pro(user)
+    sessions = _sess(user).list_sessions(project=project, limit=limit)
+    return {"sessions": sessions, "count": len(sessions)}
+
+
+@app.post("/v1/sessions/recover")
+def session_recover(
+    body: SessionRecoverRequest,
+    user: AuthUser = Depends(require_auth),
+):
+    _check_pro(user)
+    return {"recovery": _sess(user).recover_context(project=body.project)}
 
 
 # ------------------------------------------------------------------

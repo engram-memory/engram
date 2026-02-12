@@ -63,3 +63,20 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     version: str
     memories: int
+
+
+# ------------------------------------------------------------------
+# Sessions (Pro)
+# ------------------------------------------------------------------
+
+
+class SessionSaveRequest(BaseModel):
+    summary: str
+    project: str | None = None
+    key_facts: list[str] = Field(default_factory=list)
+    open_tasks: list[str] = Field(default_factory=list)
+    files_modified: list[str] = Field(default_factory=list)
+
+
+class SessionRecoverRequest(BaseModel):
+    project: str | None = None

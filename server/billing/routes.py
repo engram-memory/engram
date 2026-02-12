@@ -7,7 +7,7 @@ import os
 import uuid
 
 import stripe
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from server.auth import database as db
@@ -101,7 +101,7 @@ def checkout_pro():
     Stripe collects email during checkout. After payment, the webhook
     creates the Engram account and sends the API key.
     """
-    success_url = f"{BASE_URL}/?checkout=success"
+    success_url = f"{BASE_URL}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{BASE_URL}/?checkout=cancel"
 
     checkout_url = create_public_checkout_session(
@@ -111,6 +111,83 @@ def checkout_pro():
     )
 
     return CheckoutResponse(checkout_url=checkout_url)
+
+
+# ------------------------------------------------------------------
+# Activate — retrieve API key after successful checkout
+# ------------------------------------------------------------------
+
+
+@router.get("/activate")
+def activate(session_id: str = Query(..., description="Stripe Checkout session ID")):
+    """Exchange a Stripe checkout session for an API key.
+
+    Called from the success page after payment. Verifies with Stripe
+    that payment was completed, creates the user account if needed,
+    and returns the API key exactly once.
+    """
+    # Verify with Stripe
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.error.InvalidRequestError:
+        raise HTTPException(400, "Invalid session ID")
+
+    if session.payment_status != "paid":
+        raise HTTPException(402, "Payment not completed")
+
+    customer_id = session.customer
+    customer_email = session.customer_details.email if session.customer_details else ""
+    tier = (session.metadata or {}).get("engram_tier", "pro")
+
+    if not customer_email:
+        raise HTTPException(400, "No email found in checkout session")
+
+    # Create or find user
+    user_id = _find_or_create_user(customer_email, customer_id, tier)
+
+    # Check if key was already issued for this session
+    existing_keys = db.get_api_keys_for_user_by_name(user_id, f"checkout:{session_id}")
+    if existing_keys:
+        raise HTTPException(
+            409,
+            "API key was already issued for this checkout. "
+            "If you lost your key, contact levent@engram-ai.dev",
+        )
+
+    # Generate API key (name includes session_id for idempotency)
+    key_id, full_key, key_hash = generate_api_key()
+    db.store_api_key(key_id, user_id, key_hash, full_key[:20], name=f"checkout:{session_id}")
+    log.info("Issued API key for user %s via activate endpoint", user_id)
+
+    return {
+        "api_key": full_key,
+        "email": customer_email,
+        "tier": tier,
+        "message": "Save this key now. It cannot be shown again.",
+    }
+
+
+def _find_or_create_user(email: str, stripe_customer_id: str, tier: str) -> str:
+    """Find existing user or create one. Returns user_id."""
+    # Try by Stripe customer ID first
+    user = db.get_user_by_stripe_customer_id(stripe_customer_id)
+    if user:
+        return user["id"]
+
+    # Try by email
+    user = db.get_user_by_email(email)
+    if user:
+        db.update_stripe_customer_id(user["id"], stripe_customer_id)
+        db.update_user_tier(user["id"], tier)
+        return user["id"]
+
+    # Create new user
+    user_id = str(uuid.uuid4())
+    temp_pw = hash_password(uuid.uuid4().hex)
+    db.create_user(user_id, email, temp_pw, tier=tier)
+    db.update_stripe_customer_id(user_id, stripe_customer_id)
+    log.info("Auto-created user %s for %s", user_id, email)
+    return user_id
 
 
 # ------------------------------------------------------------------
@@ -206,36 +283,19 @@ def _get_user_by_stripe_customer(customer_id: str) -> dict | None:
 def _handle_checkout_completed(session: dict) -> None:
     """Activate tier after successful checkout.
 
-    For the public landing-page flow (no pre-existing account) this
-    auto-creates an Engram user, generates an API key, and links the
-    Stripe customer.  The email with the API key is a TODO.
+    Creates the user account as a safety net — the /activate endpoint
+    is the primary path for key delivery to the customer.
     """
     customer_id = session.get("customer")
     tier = session.get("metadata", {}).get("engram_tier", "pro")
     subscription_id = session.get("subscription")
     customer_email = session.get("customer_details", {}).get("email", "")
 
-    user = _get_user_by_stripe_customer(customer_id)
-
-    if not user and customer_email:
-        # Check if a user with this email already exists
-        user = db.get_user_by_email(customer_email)
-
-        if not user:
-            # Auto-create account for landing page checkout
-            user_id = str(uuid.uuid4())
-            temp_pw = hash_password(uuid.uuid4().hex)  # unusable random password
-            user = db.create_user(user_id, customer_email, temp_pw, tier=tier)
-            log.info("Auto-created user %s for Stripe customer %s", user_id, customer_id)
-
-        # Link Stripe customer to user
-        db.update_stripe_customer_id(user["id"], customer_id)
-
-        # Generate an API key for the new user
-        key_id, full_key, key_hash = generate_api_key()
-        db.store_api_key(key_id, user["id"], key_hash, full_key[:20], name="pro-checkout")
-        log.info("Generated API key %s... for user %s", full_key[:20], user["id"])
-        # TODO: send welcome email with full_key to customer_email
+    if customer_email and customer_id:
+        user_id = _find_or_create_user(customer_email, customer_id, tier)
+        user = db.get_user_by_id(user_id)
+    else:
+        user = _get_user_by_stripe_customer(customer_id)
 
     if user:
         db.update_user_tier(user["id"], tier)

@@ -176,6 +176,15 @@ def get_api_keys_for_user(user_id: str) -> list[dict]:
         return results
 
 
+def get_api_keys_for_user_by_name(user_id: str, name: str) -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM api_keys WHERE user_id = ? AND name = ?",
+            (user_id, name),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def count_api_keys_for_user(user_id: str) -> int:
     with _conn() as c:
         row = c.execute(

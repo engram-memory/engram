@@ -1470,16 +1470,51 @@ function startCheckout() {
     });
 }
 
-// Handle checkout return
+// Handle checkout return — fetch and display API key
 (function handleCheckoutReturn() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('checkout') === 'success') {
-    const banner = document.createElement('div');
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(135deg,#6B46C1,#06B6D4);color:#fff;text-align:center;padding:16px;font-family:Inter,sans-serif;font-weight:600;font-size:1rem;';
-    banner.innerHTML = 'Welcome to Engram Pro! Check your email for your API key. <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;margin-left:16px;cursor:pointer;font-size:1.2rem">&times;</button>';
-    document.body.prepend(banner);
-    history.replaceState({}, '', '/');
-  }
+  if (params.get('checkout') !== 'success') return;
+  const sid = params.get('session_id');
+  if (!sid) return;
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'key-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;';
+  overlay.innerHTML = '<div style="background:#12121e;border:1px solid #6B46C1;border-radius:16px;padding:48px;max-width:560px;width:90%;text-align:center">' +
+    '<div style="font-size:2rem;margin-bottom:8px">&#127881;</div>' +
+    '<h2 style="color:#e8e8f0;margin-bottom:8px;font-size:1.5rem">Welcome to Engram Pro!</h2>' +
+    '<p id="key-status" style="color:#8888a8;margin-bottom:24px">Activating your account...</p>' +
+    '<div id="key-box" style="display:none;background:#0a0a0f;border:1px solid #1e1e35;border-radius:8px;padding:16px;margin-bottom:16px;position:relative">' +
+      '<code id="key-value" style="color:#22D3EE;font-family:JetBrains Mono,monospace;font-size:0.85rem;word-break:break-all"></code>' +
+      '<button onclick="navigator.clipboard.writeText(document.getElementById(\'key-value\').textContent).then(()=>{this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy\',2000)})" style="position:absolute;top:8px;right:8px;background:#6B46C1;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.8rem">Copy</button>' +
+    '</div>' +
+    '<p id="key-warning" style="display:none;color:#F59E0B;font-size:0.85rem;margin-bottom:24px">&#9888; Save this key now. It cannot be shown again.</p>' +
+    '<p id="key-usage" style="display:none;color:#8888a8;font-size:0.85rem;margin-bottom:24px">Use it with: <code style="color:#22D3EE;background:#0a0a0f;padding:2px 8px;border-radius:4px">X-API-Key: your_key</code></p>' +
+    '<button id="key-close" style="display:none;background:linear-gradient(135deg,#6B46C1,#06B6D4);color:#fff;border:none;border-radius:8px;padding:12px 32px;cursor:pointer;font-size:1rem;font-weight:600" onclick="document.getElementById(\'key-overlay\').remove()">I\'ve saved my key</button>' +
+  '</div>';
+  document.body.appendChild(overlay);
+  history.replaceState({}, '', '/');
+
+  // Fetch API key from activate endpoint
+  fetch(ENGRAM_API + '/v1/billing/activate?session_id=' + encodeURIComponent(sid))
+    .then(r => {
+      if (r.status === 409) return r.json().then(d => { throw new Error(d.detail || 'Key already issued'); });
+      if (!r.ok) throw new Error('Activation failed');
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('key-status').textContent = 'Your API key for ' + data.email;
+      document.getElementById('key-value').textContent = data.api_key;
+      document.getElementById('key-box').style.display = 'block';
+      document.getElementById('key-warning').style.display = 'block';
+      document.getElementById('key-usage').style.display = 'block';
+      document.getElementById('key-close').style.display = 'inline-block';
+    })
+    .catch(err => {
+      document.getElementById('key-status').innerHTML = err.message +
+        '<br><br><a href="mailto:levent@engram-ai.dev?subject=Pro%20Activation%20Issue" style="color:#22D3EE">Contact support</a>';
+    });
 })();
 
 // Scroll animations (IntersectionObserver)
