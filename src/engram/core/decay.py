@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def compute_decay(
@@ -18,7 +18,7 @@ def compute_decay(
     Higher importance and access count slow down decay.
     Score of 1.0 = fully fresh, 0.0 = completely decayed.
     """
-    now = now or datetime.utcnow()
+    now = now or datetime.now(timezone.utc)
     hours_since = max((now - last_accessed).total_seconds() / 3600, 0)
 
     # importance 10 → factor 0.1, importance 1 → factor 1.0

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -149,7 +149,7 @@ class Memory:
         """Remove old, low-importance, rarely-accessed memories."""
         from datetime import timedelta
 
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         ns = namespace or self._namespace
 
         with self._backend._conn() as conn:
@@ -175,7 +175,7 @@ class Memory:
         """Export all memories in a namespace as JSON or Markdown."""
         entries = self.list(namespace=namespace, limit=10000)
         if format == "markdown":
-            lines = [f"# Engram Memory Export ({datetime.utcnow().isoformat()})\n"]
+            lines = [f"# Engram Memory Export ({datetime.now(timezone.utc).isoformat()})\n"]
             for e in entries:
                 lines.append(f"## [{e.memory_type.value}] (importance: {e.importance})")
                 lines.append(e.content)

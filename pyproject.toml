@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "engram-core"
-version = "0.2.0"
+version = "0.3.0"
 description = "Memory that sticks. Universal memory layer for AI agents."
 readme = "README.md"
 license = "MIT"
@@ -67,7 +67,7 @@ engram = "engram.cli:main"
 engram-server = "server.api:run"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/engram", "server"]
+packages = ["src/engram", "server", "mcp_server"]
 
 [tool.ruff]
 target-version = "py310"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -142,7 +143,7 @@ def create_key(body: CreateApiKeyRequest, user: AuthUser = Depends(require_auth)
         key_prefix=key_prefix,
         name=body.name,
         scopes=body.scopes,
-        created_at=__import__("datetime").datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 

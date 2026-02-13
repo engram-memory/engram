@@ -19,10 +19,12 @@ class SessionManager:
 
     def __init__(self, db_path: str | Path | None = None):
         if db_path is None:
-            db_path = Path(os.environ.get(
-                "ENGRAM_DB_PATH",
-                Path.home() / ".engram" / "memory.db",
-            ))
+            db_path = Path(
+                os.environ.get(
+                    "ENGRAM_DB_PATH",
+                    Path.home() / ".engram" / "memory.db",
+                )
+            )
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()

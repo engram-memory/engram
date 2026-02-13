@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
+
+log = logging.getLogger(__name__)
 
 try:
     from dotenv import load_dotenv
@@ -104,7 +107,7 @@ def _check_memory_limit(user: AuthUser, mem: Memory) -> None:
         raise HTTPException(
             403,
             f"Memory limit reached ({limits.max_memories}). "
-            f"Upgrade your plan at https://engram.dev/pricing",
+            f"Upgrade your plan at https://engram-ai.dev/#pricing",
         )
 
 

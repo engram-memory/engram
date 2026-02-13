@@ -129,7 +129,8 @@ def activate(session_id: str = Query(..., description="Stripe Checkout session I
     # Verify with Stripe
     try:
         session = stripe.checkout.Session.retrieve(session_id)
-    except stripe.error.InvalidRequestError:
+    except (stripe.InvalidRequestError, Exception) as e:
+        log.warning("Stripe session retrieval failed: %s", e)
         raise HTTPException(400, "Invalid session ID")
 
     if session.payment_status != "paid":
@@ -237,8 +238,9 @@ async def stripe_webhook(request: Request):
     if WEBHOOK_SECRET:
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
-        except stripe.error.SignatureVerificationError:
-            raise HTTPException(400, "Invalid webhook signature")
+        except (stripe.SignatureVerificationError, Exception) as e:
+            log.warning("Webhook signature verification failed: %s", e)
+            raise HTTPException(400, "Invalid webhook signature")  # noqa: B904
     else:
         # Dev/test mode: parse without signature verification
         import json
@@ -287,9 +289,11 @@ def _handle_checkout_completed(session: dict) -> None:
     is the primary path for key delivery to the customer.
     """
     customer_id = session.get("customer")
-    tier = session.get("metadata", {}).get("engram_tier", "pro")
+    raw_tier = session.get("metadata", {}).get("engram_tier", "pro")
+    tier = raw_tier if raw_tier in ("free", "pro", "enterprise") else "pro"
     subscription_id = session.get("subscription")
     customer_email = session.get("customer_details", {}).get("email", "")
+    log.info("Checkout completed: customer=%s tier=%s email=%s", customer_id, tier, customer_email)
 
     if customer_email and customer_id:
         user_id = _find_or_create_user(customer_email, customer_id, tier)
@@ -327,9 +331,8 @@ def _handle_subscription_deleted(subscription: dict) -> None:
 
 
 def _handle_payment_failed(invoice: dict) -> None:
-    """Handle failed payment — could send notification, for now just log."""
+    """Handle failed payment — log the event."""
     customer_id = invoice.get("customer")
     user = _get_user_by_stripe_customer(customer_id)
     if user:
-        # TODO: Send email notification about failed payment
-        pass
+        log.warning("Payment failed for user %s (customer=%s)", user["id"], customer_id)

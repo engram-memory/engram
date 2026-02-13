@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -36,8 +36,8 @@ class MemoryEntry(BaseModel):
     content_hash: str | None = None
     embedding: list[float] | None = None
     decay_score: float = Field(default=1.0, ge=0.0, le=1.0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    accessed_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    accessed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     access_count: int = 0
 
     def compute_hash(self) -> str:

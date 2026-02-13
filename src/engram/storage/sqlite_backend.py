@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +79,14 @@ class SQLiteBackend:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_importance ON memories(importance DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_namespace ON memories(namespace)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_hash ON memories(content_hash)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_ns_importance "
+                "ON memories(namespace, importance DESC)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_priority "
+                "ON memories(importance DESC, access_count DESC, accessed_at DESC)"
+            )
             conn.commit()
 
     def _conn(self) -> sqlite3.Connection:
@@ -198,8 +206,8 @@ class SQLiteBackend:
                     )
                     for r in rows
                 ]
-            except Exception:
-                # Fallback to LIKE
+            except sqlite3.OperationalError:
+                # FTS5 query failed — fallback to LIKE
                 words = query.split()
                 if not words:
                     return []
@@ -431,13 +439,13 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
 
 def _parse_dt(val: str | None) -> datetime:
     if val is None:
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
     for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
         try:
             return datetime.strptime(val, fmt)
         except ValueError:
             continue
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 def _encode_embedding(emb: list[float] | None) -> bytes | None:

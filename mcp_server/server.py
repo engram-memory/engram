@@ -36,6 +36,7 @@ def _sess() -> SessionManager:
 # Tools
 # ------------------------------------------------------------------
 
+
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     all_tools = TOOL_DEFINITIONS + PRO_TOOL_DEFINITIONS
@@ -173,6 +174,7 @@ def _dispatch(name: str, args: dict) -> dict:
 # Resources
 # ------------------------------------------------------------------
 
+
 @app.list_resources()
 async def list_resources() -> list[Resource]:
     return [
@@ -206,6 +208,7 @@ async def read_resource(uri: str) -> str:
 # ------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------
+
 
 async def main():
     async with stdio_server() as (read_stream, write_stream):

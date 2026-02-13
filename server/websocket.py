@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from fastapi import WebSocket
+
+log = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -30,6 +33,7 @@ class ConnectionManager:
             try:
                 await ws.send_text(message)
             except Exception:
+                log.debug("WebSocket disconnected from namespace %s", namespace)
                 self.disconnect(ws, namespace)
 
 
