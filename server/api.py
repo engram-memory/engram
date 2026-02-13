@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 import os
-
-log = logging.getLogger(__name__)
+from pathlib import Path
+from typing import Any
 
 try:
     from dotenv import load_dotenv
@@ -13,8 +12,6 @@ try:
     load_dotenv()
 except ImportError:
     pass
-from pathlib import Path
-from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
