@@ -13,7 +13,10 @@ TOOL_DEFINITIONS = [
                 },
                 "type": {
                     "type": "string",
-                    "description": "Memory type: fact, preference, decision, error_fix, pattern, workflow, summary, custom",
+                    "description": (
+                        "Memory type: fact, preference, decision,"
+                        " error_fix, pattern, workflow, summary, custom"
+                    ),
                     "default": "fact",
                 },
                 "importance": {
@@ -119,7 +122,10 @@ TOOL_DEFINITIONS = [
 PRO_TOOL_DEFINITIONS = [
     {
         "name": "memory_session_save",
-        "description": "Save a session checkpoint with summary, key facts, and open tasks. Use this before ending a conversation to preserve state.",
+        "description": (
+            "Save a session checkpoint with summary, key facts, and open tasks."
+            " Use this before ending a conversation to preserve state."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -152,7 +158,10 @@ PRO_TOOL_DEFINITIONS = [
     },
     {
         "name": "memory_session_load",
-        "description": "Load the most recent session checkpoint. Use this at the start of a conversation to recover context.",
+        "description": (
+            "Load the most recent session checkpoint."
+            " Use this at the start of a conversation to recover context."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -187,7 +196,10 @@ PRO_TOOL_DEFINITIONS = [
     },
     {
         "name": "memory_semantic_search",
-        "description": "Search memories using semantic similarity (embeddings). Finds conceptually related memories even without exact keyword matches.",
+        "description": (
+            "Search memories using semantic similarity (embeddings)."
+            " Finds conceptually related memories even without exact keyword matches."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -210,7 +222,11 @@ PRO_TOOL_DEFINITIONS = [
     },
     {
         "name": "memory_recover",
-        "description": "Recover context from the last session. Returns a formatted summary of where you left off, including key facts and open tasks.",
+        "description": (
+            "Recover context from the last session."
+            " Returns a formatted summary of where you left off,"
+            " including key facts and open tasks."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {

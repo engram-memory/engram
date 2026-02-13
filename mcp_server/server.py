@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -12,7 +11,7 @@ from mcp.types import Resource, TextContent, Tool
 from engram.client import Memory
 from engram.config import EngramConfig
 from engram.sessions import SessionManager
-from mcp_server.tools import TOOL_DEFINITIONS, PRO_TOOL_DEFINITIONS
+from mcp_server.tools import PRO_TOOL_DEFINITIONS, TOOL_DEFINITIONS
 
 app = Server("engram")
 _config = EngramConfig()
@@ -125,7 +124,10 @@ def _dispatch(name: str, args: dict) -> dict:
             session_id=args.get("session_id"),
         )
         if result is None:
-            return {"error": "No checkpoint found", "hint": "Save a checkpoint first with memory_session_save"}
+            return {
+                "error": "No checkpoint found",
+                "hint": "Save a checkpoint first with memory_session_save",
+            }
         return result
 
     if name == "memory_session_list":

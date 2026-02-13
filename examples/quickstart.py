@@ -22,5 +22,5 @@ for entry in context:
     print(f"  [{entry.memory_type.value}] {entry.content}")
 
 # 5. Stats
-print(f"\n--- Stats ---")
+print("\n--- Stats ---")
 print(mem.stats())

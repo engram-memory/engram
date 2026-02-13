@@ -19,10 +19,10 @@ How it works:
 """
 
 import json
-import sys
 import os
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 # Try to use Engram SDK first, fall back to direct SQLite
 USE_SDK = False
@@ -53,7 +53,11 @@ def recall_via_sdk(namespace: str = "default") -> str:
         content = entry.content
         if len(content) > MAX_CONTENT_LENGTH:
             content = content[:MAX_CONTENT_LENGTH] + "..."
-        mtype = entry.memory_type.value if hasattr(entry.memory_type, 'value') else str(entry.memory_type)
+        mtype = (
+            entry.memory_type.value
+            if hasattr(entry.memory_type, 'value')
+            else str(entry.memory_type)
+        )
         lines.append(f"- [{mtype}] {content}")
 
     return "\n".join(lines)
@@ -103,9 +107,8 @@ def detect_project(cwd: str) -> str:
     """Detect project name from working directory. Customize for your setup."""
     if not cwd:
         return None
-    cwd_lower = cwd.lower()
     # Add your project detection patterns here:
-    # if "myproject" in cwd_lower:
+    # if "myproject" in cwd.lower():
     #     return "myproject"
     return os.path.basename(cwd)
 
