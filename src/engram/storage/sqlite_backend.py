@@ -534,6 +534,10 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
 def _parse_dt(val: str | None) -> datetime:
     if val is None:
         return datetime.now(timezone.utc)
+    try:
+        return datetime.fromisoformat(val)
+    except (ValueError, TypeError):
+        pass
     for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
         try:
             return datetime.strptime(val, fmt)
