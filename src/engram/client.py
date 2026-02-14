@@ -192,7 +192,9 @@ class Memory:
         offset = 0
         while True:
             entries = self._backend.list_memories_without_embeddings(
-                namespace=ns, limit=batch_size, offset=offset,
+                namespace=ns,
+                limit=batch_size,
+                offset=offset,
             )
             if not entries:
                 break

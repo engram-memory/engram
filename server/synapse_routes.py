@@ -27,8 +27,7 @@ def _check_synapse(user: AuthUser) -> None:
     if not user.limits.synapse_bus:
         raise HTTPException(
             403,
-            "Synapse Message Bus is a Pro feature. "
-            "Upgrade at https://engram-ai.dev/#pricing",
+            "Synapse Message Bus is a Pro feature. Upgrade at https://engram-ai.dev/#pricing",
         )
 
 

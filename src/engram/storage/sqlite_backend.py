@@ -93,9 +93,7 @@ class SQLiteBackend:
                 "CREATE INDEX IF NOT EXISTS idx_priority "
                 "ON memories(importance DESC, access_count DESC, accessed_at DESC)"
             )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_expires_at ON memories(expires_at)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_expires_at ON memories(expires_at)")
             conn.commit()
 
     @staticmethod
@@ -398,8 +396,7 @@ class SQLiteBackend:
             )
 
             emb_count = conn.execute(
-                f"SELECT COUNT(*) AS count FROM memories {base_filter} "
-                "AND embedding IS NOT NULL",
+                f"SELECT COUNT(*) AS count FROM memories {base_filter} AND embedding IS NOT NULL",
                 params,
             ).fetchone()["count"]
 
