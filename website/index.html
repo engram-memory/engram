@@ -1552,8 +1552,17 @@ footer {
       <!-- Pro -->
       <div class="price-card featured fade-in" style="--i:1">
         <div class="price-name">Pro &mdash; Cloud API</div>
-        <div class="price-amount">
-          <span class="currency">&euro;</span>14<span class="period">.90/mo</span>
+        <div class="price-toggle" style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span id="toggleMonthly" style="font-size:0.8rem;font-weight:600;color:var(--text-primary);cursor:pointer">Monthly</span>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
+            <input type="checkbox" id="billingToggle" onchange="toggleBilling()" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;inset:0;background:var(--border);border-radius:24px;transition:0.3s"></span>
+            <span id="toggleDot" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s"></span>
+          </label>
+          <span id="toggleYearly" style="font-size:0.8rem;font-weight:600;color:var(--text-muted);cursor:pointer">Yearly <span style="color:var(--green);font-size:0.7rem">-20%</span></span>
+        </div>
+        <div class="price-amount" id="proPrice">
+          <span class="currency">&euro;</span>19<span class="period" id="proPeriod">.90/mo</span>
         </div>
         <div class="price-desc">Hosted on European servers (Germany). Zero setup. All Pro features included.</div>
         <ul class="price-features">
@@ -1857,13 +1866,40 @@ function switchTab(e, tabId) {
 // Stripe Checkout
 const ENGRAM_API = 'https://api.engram-ai.dev';
 
+let billingInterval = 'monthly';
+
+function toggleBilling() {
+  const toggle = document.getElementById('billingToggle');
+  const priceEl = document.getElementById('proPrice');
+  const periodEl = document.getElementById('proPeriod');
+  const dot = document.getElementById('toggleDot');
+  const mLabel = document.getElementById('toggleMonthly');
+  const yLabel = document.getElementById('toggleYearly');
+
+  if (toggle.checked) {
+    billingInterval = 'yearly';
+    priceEl.innerHTML = '<span class="currency">&euro;</span>189<span class="period" id="proPeriod">/year</span>';
+    dot.style.transform = 'translateX(20px)';
+    dot.parentElement.previousElementSibling.style.background = 'var(--purple)';
+    mLabel.style.color = 'var(--text-muted)';
+    yLabel.style.color = 'var(--text-primary)';
+  } else {
+    billingInterval = 'monthly';
+    priceEl.innerHTML = '<span class="currency">&euro;</span>19<span class="period" id="proPeriod">.90/mo</span>';
+    dot.style.transform = 'translateX(0)';
+    dot.parentElement.previousElementSibling.style.background = 'var(--border)';
+    mLabel.style.color = 'var(--text-primary)';
+    yLabel.style.color = 'var(--text-muted)';
+  }
+}
+
 function startCheckout() {
   const btn = document.getElementById('proCheckoutBtn');
   const origText = btn.textContent;
   btn.textContent = 'Redirecting...';
   btn.disabled = true;
 
-  fetch(ENGRAM_API + '/v1/billing/checkout/pro', { method: 'POST' })
+  fetch(ENGRAM_API + '/v1/billing/checkout/pro?interval=' + billingInterval, { method: 'POST' })
     .then(r => {
       if (!r.ok) throw new Error('Checkout failed');
       return r.json();

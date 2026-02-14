@@ -374,6 +374,53 @@ def get_stats(
     return _mem(user, namespace).stats()
 
 
+@app.get("/v1/usage")
+def get_usage(
+    user: AuthUser = Depends(require_auth),
+):
+    """Get current memory usage across all namespaces for the authenticated user."""
+    import sqlite3
+
+    limits = user.limits
+
+    if auth_deps.CLOUD_MODE:
+        db_path = _DATA_DIR / "tenants" / user.id / "memory.db"
+    else:
+        db_path = _DATA_DIR / "memory.db"
+
+    total_memories = 0
+    namespaces_used = 0
+    by_namespace: dict[str, int] = {}
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute("SELECT COUNT(*) FROM memories").fetchone()
+        total_memories = row[0] if row else 0
+
+        ns_rows = conn.execute(
+            "SELECT namespace, COUNT(*) AS cnt FROM memories GROUP BY namespace"
+        ).fetchall()
+        namespaces_used = len(ns_rows)
+        by_namespace = {r[0]: r[1] for r in ns_rows}
+        conn.close()
+    except sqlite3.OperationalError:
+        pass  # DB doesn't exist yet
+
+    return {
+        "memories_used": total_memories,
+        "memories_limit": limits.max_memories,
+        "memories_pct": (
+            round(total_memories / limits.max_memories * 100, 1)
+            if limits.max_memories > 0
+            else 0
+        ),
+        "namespaces_used": namespaces_used,
+        "namespaces_limit": limits.max_namespaces,
+        "by_namespace": by_namespace,
+        "tier": user.tier,
+    }
+
+
 @app.get("/v1/analytics", response_model=AnalyticsResponse)
 def get_analytics(
     user: AuthUser = Depends(require_auth),

@@ -11,24 +11,40 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 
 # Pricing: monthly in cents
 PRICE_CONFIG = {
-    "pro": {
-        "name": "Engram Pro",
-        "description": "250K memories, Synapse message bus, semantic search, WebSocket, analytics",
-        "amount": 1490,  # €14.90
+    "pro_monthly": {
+        "name": "Engram Pro (Monthly)",
+        "description": "250K memories, Memory Links, AutoSave, Synapse, semantic search, analytics",
+        "amount": 1990,  # €19.90
         "currency": "eur",
+        "interval": "month",
+        "tier": "pro",
+    },
+    "pro_yearly": {
+        "name": "Engram Pro (Yearly)",
+        "description": "250K memories, Memory Links, AutoSave, Synapse, semantic search, analytics",
+        "amount": 18900,  # €189.00/year (€15.75/mo, 20% off)
+        "currency": "eur",
+        "interval": "year",
+        "tier": "pro",
     },
     "enterprise": {
         "name": "Engram Enterprise",
         "description": "Unlimited memories, SSO, audit logs, priority support",
         "amount": 19900,  # €199.00
         "currency": "eur",
+        "interval": "month",
+        "tier": "enterprise",
     },
 }
 
+# Backwards-compat alias
+PRICE_CONFIG["pro"] = PRICE_CONFIG["pro_monthly"]
 
-def _find_or_create_product(tier: str) -> str:
+
+def _find_or_create_product(config_key: str) -> str:
     """Find existing Engram product or create it. Returns product ID."""
-    config = PRICE_CONFIG[tier]
+    config = PRICE_CONFIG[config_key]
+    tier = config.get("tier", config_key)
 
     # Search for existing product by metadata
     products = stripe.Product.search(query=f'metadata["engram_tier"]:"{tier}"')
@@ -43,9 +59,11 @@ def _find_or_create_product(tier: str) -> str:
     return product.id
 
 
-def _find_or_create_price(tier: str, product_id: str) -> str:
+def _find_or_create_price(config_key: str, product_id: str) -> str:
     """Find existing price or create it. Returns price ID."""
-    config = PRICE_CONFIG[tier]
+    config = PRICE_CONFIG[config_key]
+    interval = config.get("interval", "month")
+    tier = config.get("tier", config_key)
 
     prices = stripe.Price.list(product=product_id, active=True)
     for price in prices.data:
@@ -53,7 +71,7 @@ def _find_or_create_price(tier: str, product_id: str) -> str:
             price.unit_amount == config["amount"]
             and price.currency == config["currency"]
             and price.recurring
-            and price.recurring.interval == "month"
+            and price.recurring.interval == interval
         ):
             return price.id
 
@@ -61,19 +79,19 @@ def _find_or_create_price(tier: str, product_id: str) -> str:
         product=product_id,
         unit_amount=config["amount"],
         currency=config["currency"],
-        recurring={"interval": "month"},
+        recurring={"interval": interval},
         metadata={"engram_tier": tier},
     )
     return price.id
 
 
 @lru_cache
-def get_price_id(tier: str) -> str:
-    """Get or create the Stripe price ID for a tier."""
-    if tier not in PRICE_CONFIG:
-        raise ValueError(f"No pricing for tier: {tier}")
-    product_id = _find_or_create_product(tier)
-    return _find_or_create_price(tier, product_id)
+def get_price_id(config_key: str) -> str:
+    """Get or create the Stripe price ID for a config key (e.g. 'pro_monthly', 'pro_yearly')."""
+    if config_key not in PRICE_CONFIG:
+        raise ValueError(f"No pricing for: {config_key}")
+    product_id = _find_or_create_product(config_key)
+    return _find_or_create_price(config_key, product_id)
 
 
 def create_customer(email: str, user_id: str) -> str:

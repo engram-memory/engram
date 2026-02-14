@@ -22,7 +22,7 @@ class TestBillingModels:
     def test_pro_pricing(self):
         from server.billing.stripe_client import PRICE_CONFIG
 
-        assert PRICE_CONFIG["pro"]["amount"] == 1490
+        assert PRICE_CONFIG["pro"]["amount"] == 1990
         assert PRICE_CONFIG["pro"]["currency"] == "eur"
 
     def test_enterprise_pricing(self):

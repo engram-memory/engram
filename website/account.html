@@ -418,6 +418,55 @@ nav {
   cursor: pointer;
 }
 
+/* Usage bar */
+.usage-bar-wrap {
+  margin-top: 16px;
+}
+
+.usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.usage-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.usage-count {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.usage-bar {
+  width: 100%;
+  height: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.usage-fill {
+  height: 100%;
+  border-radius: 8px;
+  background: var(--gradient);
+  transition: width 0.6s ease;
+}
+
+.usage-fill.warn { background: var(--yellow); }
+.usage-fill.critical { background: var(--red); }
+
+.usage-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: right;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .card { padding: 20px; }
@@ -476,23 +525,34 @@ nav {
       <span class="tier-badge" id="tierBadge"></span>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-grid" id="statsGrid">
-      <div class="stat-item">
-        <div class="value gradient-text" id="statMemories">-</div>
-        <div class="label">Memories</div>
+    <!-- Usage -->
+    <div class="card" id="usageCard">
+      <div class="card-header">
+        <h3>Usage</h3>
       </div>
-      <div class="stat-item">
-        <div class="value gradient-text" id="statEmail">-</div>
-        <div class="label">Account</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="value gradient-text" id="statMemories">-</div>
+          <div class="label">Memories</div>
+        </div>
+        <div class="stat-item">
+          <div class="value gradient-text" id="statNamespaces">-</div>
+          <div class="label">Namespaces</div>
+        </div>
+        <div class="stat-item">
+          <div class="value gradient-text" id="statKeys">-</div>
+          <div class="label">API Keys</div>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="value gradient-text" id="statKeys">-</div>
-        <div class="label">API Keys</div>
-      </div>
-      <div class="stat-item">
-        <div class="value gradient-text" id="statLimit">-</div>
-        <div class="label">Memory Limit</div>
+      <div class="usage-bar-wrap" id="usageBarWrap">
+        <div class="usage-header">
+          <span class="usage-label">Memory Usage</span>
+          <span class="usage-count" id="usageCount">- / -</span>
+        </div>
+        <div class="usage-bar">
+          <div class="usage-fill" id="usageFill" style="width:0%"></div>
+        </div>
+        <div class="usage-hint" id="usageHint"></div>
       </div>
     </div>
 
@@ -590,7 +650,7 @@ async function showDashboard() {
   document.getElementById('loginSection').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('navAuth').style.display = 'flex';
-  await Promise.all([loadUser(), loadKeys(), loadStats()]);
+  await Promise.all([loadUser(), loadKeys(), loadUsage()]);
 }
 
 async function apiFetch(path, opts = {}) {
@@ -628,19 +688,13 @@ async function loadUser() {
   if (!resp) return;
   const data = await resp.json();
 
-  document.getElementById('statEmail').textContent = data.email.split('@')[0];
-
   const badge = document.getElementById('tierBadge');
   const tier = data.tier;
   badge.textContent = tier.toUpperCase();
   badge.className = 'tier-badge tier-' + tier;
 
   document.getElementById('billingTier').textContent =
-    tier === 'free' ? 'Free' : tier === 'pro' ? 'Pro' : 'Enterprise';
-
-  const limit = data.limits?.max_memories;
-  document.getElementById('statLimit').textContent =
-    limit === 0 ? 'Unlimited' : (limit >= 1000 ? (limit / 1000) + 'K' : limit);
+    tier === 'free' ? 'Free (Self-Hosted)' : tier === 'pro' ? 'Pro (Cloud API)' : 'Enterprise';
 
   if (tier === 'free') {
     document.getElementById('upgradeBtn').style.display = 'inline-block';
@@ -678,15 +732,44 @@ async function loadKeys() {
   }).join('');
 }
 
-async function loadStats() {
-  const resp = await apiFetch('/v1/stats');
+async function loadUsage() {
+  const resp = await apiFetch('/v1/usage');
   if (!resp || !resp.ok) {
     document.getElementById('statMemories').textContent = '0';
+    document.getElementById('statNamespaces').textContent = '0';
     return;
   }
   const data = await resp.json();
+
+  // Memory count
+  const used = data.memories_used;
+  const limit = data.memories_limit;
   document.getElementById('statMemories').textContent =
-    data.total_memories >= 1000 ? (data.total_memories / 1000).toFixed(1) + 'K' : data.total_memories;
+    used >= 1000 ? (used / 1000).toFixed(1) + 'K' : used;
+
+  // Namespaces
+  document.getElementById('statNamespaces').textContent =
+    data.namespaces_used + (data.namespaces_limit > 0 ? ' / ' + data.namespaces_limit : '');
+
+  // Usage bar
+  if (limit > 0) {
+    const pct = Math.min(data.memories_pct, 100);
+    const fill = document.getElementById('usageFill');
+    fill.style.width = pct + '%';
+    fill.className = 'usage-fill' + (pct >= 90 ? ' critical' : pct >= 75 ? ' warn' : '');
+
+    const fmtUsed = used >= 1000 ? (used / 1000).toFixed(1) + 'K' : used;
+    const fmtLimit = limit >= 1000 ? (limit / 1000) + 'K' : limit;
+    document.getElementById('usageCount').textContent = fmtUsed + ' / ' + fmtLimit;
+    document.getElementById('usageHint').textContent =
+      pct >= 90 ? 'Almost full! Consider upgrading.' :
+      pct >= 75 ? 'Getting close to your limit.' : '';
+  } else {
+    // Unlimited (enterprise or local)
+    document.getElementById('usageCount').textContent = used + ' (Unlimited)';
+    document.getElementById('usageFill').style.width = '0%';
+    document.getElementById('usageHint').textContent = '';
+  }
 }
 
 async function createKey() {

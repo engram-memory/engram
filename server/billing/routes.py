@@ -95,17 +95,21 @@ def checkout(body: CheckoutRequest, user: AuthUser = Depends(require_auth)):
 
 
 @router.post("/checkout/pro", response_model=CheckoutResponse)
-def checkout_pro():
+def checkout_pro(interval: str = Query("monthly", pattern="^(monthly|yearly)$")):
     """Start a Pro subscription from the landing page. No auth required.
 
     Stripe collects email during checkout. After payment, the webhook
     creates the Engram account and sends the API key.
+
+    Query params:
+        interval: "monthly" (default) or "yearly"
     """
     success_url = f"{BASE_URL}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{BASE_URL}/?checkout=cancel"
 
+    config_key = f"pro_{interval}"
     checkout_url = create_public_checkout_session(
-        tier="pro",
+        tier=config_key,
         success_url=success_url,
         cancel_url=cancel_url,
     )
@@ -159,6 +163,14 @@ def activate(session_id: str = Query(..., description="Stripe Checkout session I
     key_id, full_key, key_hash = generate_api_key()
     db.store_api_key(key_id, user_id, key_hash, full_key[:20], name=f"checkout:{session_id}")
     log.info("Issued API key for user %s via activate endpoint", user_id)
+
+    # Send welcome email (non-blocking, best effort)
+    try:
+        from server.email_service import send_welcome_email
+
+        send_welcome_email(customer_email, full_key)
+    except Exception as e:
+        log.warning("Welcome email failed (non-critical): %s", e)
 
     return {
         "api_key": full_key,
