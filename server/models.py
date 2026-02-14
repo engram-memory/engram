@@ -73,6 +73,26 @@ class HealthResponse(BaseModel):
 # ------------------------------------------------------------------
 
 
+# ------------------------------------------------------------------
+# Context Builder (Pro)
+# ------------------------------------------------------------------
+
+
+class ContextRequest(BaseModel):
+    prompt: str
+    max_tokens: int = Field(default=2000, ge=100, le=16000)
+    namespace: str | None = None
+    min_importance: int = Field(default=3, ge=1, le=10)
+
+
+class ContextResponse(BaseModel):
+    context: str
+    memories_used: int
+    token_count: int
+    truncated: bool
+    memory_ids: list[int] = Field(default_factory=list)
+
+
 class SessionSaveRequest(BaseModel):
     summary: str
     project: str | None = None

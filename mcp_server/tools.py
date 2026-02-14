@@ -271,4 +271,40 @@ PRO_TOOL_DEFINITIONS = [
             },
         },
     },
+    {
+        "name": "memory_context",
+        "description": (
+            "Smart Context Builder — auto-select the most relevant memories"
+            " for a given prompt and pack them into a token budget."
+            " Combines text search, semantic search, and priority recall."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The prompt or topic to find relevant context for",
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "description": "Maximum token budget for the context",
+                    "default": 2000,
+                    "minimum": 100,
+                    "maximum": 16000,
+                },
+                "namespace": {
+                    "type": "string",
+                    "description": "Namespace to search in",
+                },
+                "min_importance": {
+                    "type": "integer",
+                    "description": "Minimum importance threshold for priority recall",
+                    "default": 3,
+                    "minimum": 1,
+                    "maximum": 10,
+                },
+            },
+            "required": ["prompt"],
+        },
+    },
 ]

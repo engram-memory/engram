@@ -28,6 +28,8 @@ from server.auth.routes import router as auth_router
 from server.billing.routes import router as billing_router
 from server.demo_routes import router as demo_router
 from server.models import (
+    ContextRequest,
+    ContextResponse,
     ExportRequest,
     HealthResponse,
     ImportRequest,
@@ -324,6 +326,34 @@ def recall_memories(
         min_importance=body.min_importance,
     )
     return [e.model_dump(mode="json", exclude={"embedding"}) for e in entries]
+
+
+# ------------------------------------------------------------------
+# Context Builder (Pro)
+# ------------------------------------------------------------------
+
+
+@app.post("/v1/context", response_model=ContextResponse)
+def build_context_endpoint(
+    body: ContextRequest,
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """Build a token-budgeted context from the most relevant memories."""
+    _check_pro(user)
+    result = _mem(user, namespace).context(
+        body.prompt,
+        max_tokens=body.max_tokens,
+        namespace=body.namespace or namespace,
+        min_importance=body.min_importance,
+    )
+    return ContextResponse(
+        context=result.context,
+        memories_used=result.memories_used,
+        token_count=result.token_count,
+        truncated=result.truncated,
+        memory_ids=result.memory_ids,
+    )
 
 
 # ------------------------------------------------------------------

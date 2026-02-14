@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from engram.config import EngramConfig
+from engram.context import ContextResult, build_context
 from engram.core.types import MemoryEntry, MemoryType, SearchResult
 from engram.exceptions import MemoryNotFoundError
 from engram.storage.sqlite_backend import SQLiteBackend
@@ -113,6 +114,24 @@ class Memory:
         return self._backend.get_priority_memories(
             namespace=namespace or self._namespace,
             limit=limit,
+            min_importance=min_importance,
+        )
+
+    def context(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 2000,
+        namespace: str | None = None,
+        min_importance: int = 3,
+    ) -> ContextResult:
+        """Build a token-budgeted context from the most relevant memories."""
+        return build_context(
+            self._backend,
+            self._embedder,
+            prompt,
+            max_tokens=max_tokens,
+            namespace=namespace or self._namespace,
             min_importance=min_importance,
         )
 

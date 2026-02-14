@@ -178,6 +178,23 @@ def _dispatch(name: str, args: dict) -> dict:
         count = mem.cleanup_expired(namespace=ns)
         return {"removed": count, "status": "completed"}
 
+    # -- Pro Tools: Context Builder --
+
+    if name == "memory_context":
+        result = mem.context(
+            args["prompt"],
+            max_tokens=args.get("max_tokens", 2000),
+            namespace=ns,
+            min_importance=args.get("min_importance", 3),
+        )
+        return {
+            "context": result.context,
+            "memories_used": result.memories_used,
+            "token_count": result.token_count,
+            "truncated": result.truncated,
+            "memory_ids": result.memory_ids,
+        }
+
     return {"error": f"Unknown tool: {name}"}
 
 
