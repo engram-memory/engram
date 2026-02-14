@@ -179,6 +179,44 @@ class Memory:
         """Return analytics data for the Pro dashboard."""
         return self._backend.get_analytics(namespace=namespace or self._namespace, days=days)
 
+    # ------------------------------------------------------------------
+    # Memory Links (Phase 3B)
+    # ------------------------------------------------------------------
+
+    def link(
+        self,
+        source_id: int,
+        target_id: int,
+        relation: str = "related",
+        metadata: dict[str, Any] | None = None,
+    ) -> int | None:
+        """Create a directed link between two memories. Returns link id or None if duplicate."""
+        return self._backend.link(source_id, target_id, relation, metadata)
+
+    def unlink(self, link_id: int) -> bool:
+        """Delete a link by its id."""
+        return self._backend.unlink(link_id)
+
+    def links(
+        self,
+        memory_id: int,
+        *,
+        direction: str = "both",
+        relation: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get all links for a memory."""
+        return self._backend.get_links(memory_id, direction=direction, relation=relation)
+
+    def graph(
+        self,
+        memory_id: int,
+        *,
+        max_depth: int = 2,
+        relation: str | None = None,
+    ) -> dict[str, Any]:
+        """BFS graph traversal starting from a memory."""
+        return self._backend.get_graph(memory_id, max_depth=max_depth, relation=relation)
+
     def prune(
         self,
         *,

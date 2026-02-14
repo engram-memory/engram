@@ -32,8 +32,10 @@ from server.models import (
     ContextRequest,
     ContextResponse,
     ExportRequest,
+    GraphRequest,
     HealthResponse,
     ImportRequest,
+    LinkRequest,
     RecallRequest,
     SearchRequest,
     SessionRecoverRequest,
@@ -506,6 +508,76 @@ def session_recover(
 ):
     _check_pro(user)
     return {"recovery": _sess(user).recover_context(project=body.project)}
+
+
+# ------------------------------------------------------------------
+# Memory Links (Pro — Phase 3B)
+# ------------------------------------------------------------------
+
+
+@app.post("/v1/links")
+async def create_link(
+    body: LinkRequest,
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """Create a directed link between two memories."""
+    _check_pro(user)
+    link_id = _mem(user, namespace).link(body.source_id, body.target_id, body.relation)
+    if link_id is None:
+        raise HTTPException(409, "Link already exists or invalid memory IDs")
+    await manager.broadcast(
+        namespace,
+        "link_created",
+        {
+            "id": link_id,
+            "source_id": body.source_id,
+            "target_id": body.target_id,
+            "relation": body.relation,
+        },
+    )
+    return {"id": link_id, "status": "linked"}
+
+
+@app.delete("/v1/links/{link_id}")
+async def delete_link(
+    link_id: int,
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """Remove a link between memories."""
+    _check_pro(user)
+    if not _mem(user, namespace).unlink(link_id):
+        raise HTTPException(404, "Link not found")
+    await manager.broadcast(namespace, "link_deleted", {"id": link_id})
+    return {"deleted": True}
+
+
+@app.get("/v1/memories/{memory_id}/links")
+def get_memory_links(
+    memory_id: int,
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+    direction: str = Query("both", pattern="^(outgoing|incoming|both)$"),
+    relation: str | None = Query(None),
+):
+    """Get all links for a specific memory."""
+    _check_pro(user)
+    links = _mem(user, namespace).links(memory_id, direction=direction, relation=relation)
+    return {"links": links, "count": len(links)}
+
+
+@app.post("/v1/graph")
+def traverse_graph(
+    body: GraphRequest,
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """BFS graph traversal starting from a memory."""
+    _check_pro(user)
+    return _mem(user, namespace).graph(
+        body.memory_id, max_depth=body.max_depth, relation=body.relation
+    )
 
 
 # ------------------------------------------------------------------

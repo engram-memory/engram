@@ -94,6 +94,27 @@ class SQLiteBackend:
                 "ON memories(importance DESC, access_count DESC, accessed_at DESC)"
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_expires_at ON memories(expires_at)")
+
+            # ----------------------------------------------------------
+            # Memory Links (Phase 3B)
+            # ----------------------------------------------------------
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS memory_links (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_id INTEGER NOT NULL,
+                    target_id INTEGER NOT NULL,
+                    relation TEXT NOT NULL DEFAULT 'related',
+                    metadata TEXT DEFAULT '{}',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (source_id) REFERENCES memories(id) ON DELETE CASCADE,
+                    FOREIGN KEY (target_id) REFERENCES memories(id) ON DELETE CASCADE,
+                    UNIQUE(source_id, target_id, relation)
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_links_source ON memory_links(source_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_links_target ON memory_links(target_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_links_relation ON memory_links(relation)")
             conn.commit()
 
     @staticmethod
@@ -110,6 +131,7 @@ class SQLiteBackend:
         conn = sqlite3.connect(str(self.db_path))
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
     # ------------------------------------------------------------------
@@ -512,6 +534,175 @@ class SQLiteBackend:
                 params,
             ).fetchall()
             return [_row_to_entry(r) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Memory Links
+    # ------------------------------------------------------------------
+
+    def link(
+        self,
+        source_id: int,
+        target_id: int,
+        relation: str = "related",
+        metadata: dict | None = None,
+    ) -> int | None:
+        """Create a directed link between two memories. Returns link id or None if duplicate."""
+        meta_str = json.dumps(metadata or {})
+        try:
+            with self._conn() as conn:
+                cur = conn.execute(
+                    """
+                    INSERT INTO memory_links (source_id, target_id, relation, metadata)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (source_id, target_id, relation, meta_str),
+                )
+                conn.commit()
+                return cur.lastrowid
+        except sqlite3.IntegrityError:
+            return None  # duplicate or FK violation
+
+    def unlink(self, link_id: int) -> bool:
+        """Delete a link by its id."""
+        with self._conn() as conn:
+            cur = conn.execute("DELETE FROM memory_links WHERE id = ?", (link_id,))
+            conn.commit()
+            return cur.rowcount > 0
+
+    def get_links(
+        self,
+        memory_id: int,
+        *,
+        direction: str = "both",
+        relation: str | None = None,
+    ) -> list[dict]:
+        """Get links for a memory.
+
+        direction: "outgoing" (source=id), "incoming" (target=id), "both"
+        """
+        results: list[dict] = []
+        rel_filter = ""
+        params_base: list[Any] = []
+        if relation:
+            rel_filter = " AND relation = ?"
+            params_base = [relation]
+
+        with self._conn() as conn:
+            conn.row_factory = sqlite3.Row
+            if direction in ("outgoing", "both"):
+                params = [memory_id] + params_base
+                rows = conn.execute(
+                    f"""
+                    SELECT l.id, l.source_id, l.target_id, l.relation,
+                           l.metadata, l.created_at, m.content AS target_content
+                    FROM memory_links l
+                    JOIN memories m ON m.id = l.target_id
+                    WHERE l.source_id = ? {rel_filter}
+                    ORDER BY l.created_at DESC
+                    """,
+                    params,
+                ).fetchall()
+                for r in rows:
+                    results.append(
+                        {
+                            "id": r["id"],
+                            "source_id": r["source_id"],
+                            "target_id": r["target_id"],
+                            "relation": r["relation"],
+                            "direction": "outgoing",
+                            "linked_content": r["target_content"],
+                            "metadata": json.loads(r["metadata"] or "{}"),
+                            "created_at": r["created_at"],
+                        }
+                    )
+
+            if direction in ("incoming", "both"):
+                params = [memory_id] + params_base
+                rows = conn.execute(
+                    f"""
+                    SELECT l.id, l.source_id, l.target_id, l.relation,
+                           l.metadata, l.created_at, m.content AS source_content
+                    FROM memory_links l
+                    JOIN memories m ON m.id = l.source_id
+                    WHERE l.target_id = ? {rel_filter}
+                    ORDER BY l.created_at DESC
+                    """,
+                    params,
+                ).fetchall()
+                for r in rows:
+                    results.append(
+                        {
+                            "id": r["id"],
+                            "source_id": r["source_id"],
+                            "target_id": r["target_id"],
+                            "relation": r["relation"],
+                            "direction": "incoming",
+                            "linked_content": r["source_content"],
+                            "metadata": json.loads(r["metadata"] or "{}"),
+                            "created_at": r["created_at"],
+                        }
+                    )
+        return results
+
+    def get_graph(
+        self,
+        memory_id: int,
+        *,
+        max_depth: int = 2,
+        relation: str | None = None,
+    ) -> dict:
+        """BFS graph traversal starting from a memory.
+
+        Returns {"nodes": [...], "edges": [...], "root": memory_id}
+        """
+        max_depth = min(max_depth, 5)
+        visited: set[int] = set()
+        seen_edges: set[int] = set()
+        nodes: list[dict] = []
+        edges: list[dict] = []
+        queue: list[tuple[int, int]] = [(memory_id, 0)]  # (id, depth)
+
+        while queue:
+            current_id, depth = queue.pop(0)
+            if current_id in visited:
+                continue
+            visited.add(current_id)
+
+            # Add node
+            entry = self.get(current_id)
+            if entry is None:
+                continue
+            nodes.append(
+                {
+                    "id": entry.id,
+                    "content": entry.content[:200],
+                    "type": entry.memory_type.value,
+                    "importance": entry.importance,
+                    "depth": depth,
+                }
+            )
+
+            if depth >= max_depth:
+                continue
+
+            # Get all links (both directions)
+            links = self.get_links(current_id, direction="both", relation=relation)
+            for lnk in links:
+                other_id = lnk["target_id"] if lnk["source_id"] == current_id else lnk["source_id"]
+                if lnk["id"] not in seen_edges:
+                    seen_edges.add(lnk["id"])
+                    edges.append(
+                        {
+                            "id": lnk["id"],
+                            "source_id": lnk["source_id"],
+                            "target_id": lnk["target_id"],
+                            "relation": lnk["relation"],
+                        }
+                    )
+                if other_id not in visited:
+                    queue.append((other_id, depth + 1))
+
+        return {"nodes": nodes, "edges": edges, "root": memory_id}
 
     # ------------------------------------------------------------------
     # Backfill & Cleanup

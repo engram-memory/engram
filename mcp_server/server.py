@@ -11,7 +11,7 @@ from mcp.types import Resource, TextContent, Tool
 from engram.client import Memory
 from engram.config import EngramConfig
 from engram.sessions import SessionManager
-from mcp_server.tools import PRO_TOOL_DEFINITIONS, TOOL_DEFINITIONS
+from mcp_server.tools import LINK_TOOL_DEFINITIONS, PRO_TOOL_DEFINITIONS, TOOL_DEFINITIONS
 
 app = Server("engram")
 _config = EngramConfig(enable_embeddings=True)
@@ -39,7 +39,7 @@ def _sess() -> SessionManager:
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
-    all_tools = TOOL_DEFINITIONS + PRO_TOOL_DEFINITIONS
+    all_tools = TOOL_DEFINITIONS + PRO_TOOL_DEFINITIONS + LINK_TOOL_DEFINITIONS
     return [Tool(**td) for td in all_tools]
 
 
@@ -194,6 +194,40 @@ def _dispatch(name: str, args: dict) -> dict:
             "truncated": result.truncated,
             "memory_ids": result.memory_ids,
         }
+
+    # -- Pro Tools: Memory Links --
+
+    if name == "memory_link":
+        link_id = mem.link(
+            args["source_id"],
+            args["target_id"],
+            relation=args.get("relation", "related"),
+        )
+        return {
+            "id": link_id,
+            "duplicate": link_id is None,
+            "status": "linked" if link_id else "duplicate",
+        }
+
+    if name == "memory_unlink":
+        deleted = mem.unlink(args["link_id"])
+        return {"deleted": deleted, "link_id": args["link_id"]}
+
+    if name == "memory_links":
+        links = mem.links(
+            args["memory_id"],
+            direction=args.get("direction", "both"),
+            relation=args.get("relation"),
+        )
+        return {"links": links, "count": len(links)}
+
+    if name == "memory_graph":
+        graph = mem.graph(
+            args["memory_id"],
+            max_depth=args.get("max_depth", 2),
+            relation=args.get("relation"),
+        )
+        return graph
 
     return {"error": f"Unknown tool: {name}"}
 

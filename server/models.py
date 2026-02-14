@@ -113,3 +113,20 @@ class SessionSaveRequest(BaseModel):
 
 class SessionRecoverRequest(BaseModel):
     project: str | None = None
+
+
+# ------------------------------------------------------------------
+# Memory Links (Phase 3B — Pro)
+# ------------------------------------------------------------------
+
+
+class LinkRequest(BaseModel):
+    source_id: int
+    target_id: int
+    relation: str = "related"
+
+
+class GraphRequest(BaseModel):
+    memory_id: int
+    max_depth: int = Field(default=2, ge=1, le=5)
+    relation: str | None = None

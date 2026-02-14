@@ -308,3 +308,110 @@ PRO_TOOL_DEFINITIONS = [
         },
     },
 ]
+
+# ------------------------------------------------------------------
+# Pro Tools — Memory Links (Phase 3B)
+# ------------------------------------------------------------------
+
+LINK_TOOL_DEFINITIONS = [
+    {
+        "name": "memory_link",
+        "description": (
+            "Create a directed link between two memories."
+            " Example: mem.link(bug_id, fix_id, 'caused_by')."
+            " Relations: related, caused_by, depends_on, supersedes,"
+            " contradicts, derived_from, follow_up."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "source_id": {
+                    "type": "integer",
+                    "description": "Source memory ID (the 'from' side)",
+                },
+                "target_id": {
+                    "type": "integer",
+                    "description": "Target memory ID (the 'to' side)",
+                },
+                "relation": {
+                    "type": "string",
+                    "description": (
+                        "Relation type: related, caused_by, depends_on,"
+                        " supersedes, contradicts, derived_from, follow_up"
+                    ),
+                    "default": "related",
+                },
+            },
+            "required": ["source_id", "target_id"],
+        },
+    },
+    {
+        "name": "memory_unlink",
+        "description": "Remove a link between memories by link ID.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "link_id": {
+                    "type": "integer",
+                    "description": "The link ID to remove",
+                },
+            },
+            "required": ["link_id"],
+        },
+    },
+    {
+        "name": "memory_links",
+        "description": (
+            "Get all links for a memory. Shows what other memories are connected and how."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "memory_id": {
+                    "type": "integer",
+                    "description": "The memory ID to get links for",
+                },
+                "direction": {
+                    "type": "string",
+                    "description": "Filter direction: outgoing, incoming, or both",
+                    "default": "both",
+                    "enum": ["outgoing", "incoming", "both"],
+                },
+                "relation": {
+                    "type": "string",
+                    "description": "Filter by relation type (optional)",
+                },
+            },
+            "required": ["memory_id"],
+        },
+    },
+    {
+        "name": "memory_graph",
+        "description": (
+            "Traverse the memory graph starting from a memory."
+            " BFS traversal returns all connected nodes and edges."
+            " Use this to find everything related to a bug, decision, or topic."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "memory_id": {
+                    "type": "integer",
+                    "description": "Starting memory ID for traversal",
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "description": "Maximum traversal depth (1-5)",
+                    "default": 2,
+                    "minimum": 1,
+                    "maximum": 5,
+                },
+                "relation": {
+                    "type": "string",
+                    "description": "Filter edges by relation type (optional)",
+                },
+            },
+            "required": ["memory_id"],
+        },
+    },
+]
