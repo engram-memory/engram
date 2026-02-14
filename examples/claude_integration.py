@@ -28,9 +28,7 @@ mem = Memory(namespace="claude-assistant")
 
 # Before each conversation, inject priority context
 context = mem.recall(min_importance=7)
-system_prompt_addition = "\n".join(
-    f"- [{e.memory_type.value}] {e.content}" for e in context
-)
+system_prompt_addition = "\n".join(f"- [{e.memory_type.value}] {e.content}" for e in context)
 print("Context to inject into system prompt:")
 print(system_prompt_addition or "(no memories yet)")
 

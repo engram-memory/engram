@@ -28,15 +28,16 @@ from pathlib import Path
 USE_SDK = False
 try:
     from engram import Memory
+
     USE_SDK = True
 except ImportError:
     import sqlite3
 
 
 # === Configuration ===
-MIN_IMPORTANCE = 8          # Only recall memories with importance >= this
-MAX_MEMORIES = 15           # Maximum memories to inject
-MAX_CONTENT_LENGTH = 200    # Truncate long memories
+MIN_IMPORTANCE = 8  # Only recall memories with importance >= this
+MAX_MEMORIES = 15  # Maximum memories to inject
+MAX_CONTENT_LENGTH = 200  # Truncate long memories
 ENGRAM_DB = Path.home() / ".engram" / "memory.db"
 
 
@@ -55,7 +56,7 @@ def recall_via_sdk(namespace: str = "default") -> str:
             content = content[:MAX_CONTENT_LENGTH] + "..."
         mtype = (
             entry.memory_type.value
-            if hasattr(entry.memory_type, 'value')
+            if hasattr(entry.memory_type, "value")
             else str(entry.memory_type)
         )
         lines.append(f"- [{mtype}] {content}")
@@ -71,31 +72,37 @@ def recall_via_sqlite() -> str:
     try:
         with sqlite3.connect(ENGRAM_DB) as conn:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT content, importance, memory_type, tags
                 FROM memories
                 WHERE importance >= ?
                 ORDER BY importance DESC, access_count DESC, created_at DESC
                 LIMIT ?
-            """, (MIN_IMPORTANCE, MAX_MEMORIES)).fetchall()
+            """,
+                (MIN_IMPORTANCE, MAX_MEMORIES),
+            ).fetchall()
 
             if not rows:
                 return ""
 
             lines = ["## Engram Memory (auto-recalled)"]
             for row in rows:
-                content = row['content']
+                content = row["content"]
                 if len(content) > MAX_CONTENT_LENGTH:
                     content = content[:MAX_CONTENT_LENGTH] + "..."
-                mtype = row['memory_type'] or "fact"
+                mtype = row["memory_type"] or "fact"
                 lines.append(f"- [{mtype}] {content}")
 
             # Update access counts
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE memories
                 SET access_count = access_count + 1, accessed_at = CURRENT_TIMESTAMP
                 WHERE importance >= ?
-            """, (MIN_IMPORTANCE,))
+            """,
+                (MIN_IMPORTANCE,),
+            )
             conn.commit()
 
             return "\n".join(lines)

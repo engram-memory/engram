@@ -410,9 +410,7 @@ def get_usage(
         "memories_used": total_memories,
         "memories_limit": limits.max_memories,
         "memories_pct": (
-            round(total_memories / limits.max_memories * 100, 1)
-            if limits.max_memories > 0
-            else 0
+            round(total_memories / limits.max_memories * 100, 1) if limits.max_memories > 0 else 0
         ),
         "namespaces_used": namespaces_used,
         "namespaces_limit": limits.max_namespaces,
