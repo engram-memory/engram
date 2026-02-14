@@ -12,6 +12,8 @@ from engram.core.dedup import content_hash
 from engram.core.search import sanitize_fts_query
 from engram.core.types import MemoryEntry, MemoryType, SearchResult
 
+_NOT_EXPIRED = "(expires_at IS NULL OR expires_at > datetime('now'))"
+
 
 class SQLiteBackend:
     """SQLite storage with FTS5 full-text search."""
@@ -41,9 +43,13 @@ class SQLiteBackend:
                     decay_score REAL DEFAULT 1.0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    access_count INTEGER DEFAULT 0
+                    access_count INTEGER DEFAULT 0,
+                    expires_at TIMESTAMP
                 )
             """)
+
+            # Migration: add expires_at to existing tables
+            self._migrate_add_column(conn, "memories", "expires_at", "TIMESTAMP")
 
             conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
@@ -87,7 +93,20 @@ class SQLiteBackend:
                 "CREATE INDEX IF NOT EXISTS idx_priority "
                 "ON memories(importance DESC, access_count DESC, accessed_at DESC)"
             )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_expires_at ON memories(expires_at)"
+            )
             conn.commit()
+
+    @staticmethod
+    def _migrate_add_column(
+        conn: sqlite3.Connection, table: str, column: str, col_type: str
+    ) -> None:
+        """Safely add a column if it doesn't exist."""
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path))
@@ -107,6 +126,7 @@ class SQLiteBackend:
         tags_str = json.dumps(entry.tags)
         meta_str = json.dumps(entry.metadata)
         emb_blob = _encode_embedding(entry.embedding)
+        expires_str = entry.expires_at.isoformat() if entry.expires_at else None
 
         try:
             with self._conn() as conn:
@@ -115,8 +135,8 @@ class SQLiteBackend:
                     INSERT INTO memories
                         (content, memory_type, importance, namespace, tags, metadata,
                          content_hash, embedding, decay_score,
-                         created_at, accessed_at, access_count)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         created_at, accessed_at, access_count, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         entry.content,
@@ -131,6 +151,7 @@ class SQLiteBackend:
                         entry.created_at.isoformat(),
                         entry.accessed_at.isoformat(),
                         entry.access_count,
+                        expires_str,
                     ),
                 )
                 conn.commit()
@@ -154,7 +175,10 @@ class SQLiteBackend:
     def get(self, memory_id: int) -> MemoryEntry | None:
         with self._conn() as conn:
             conn.row_factory = sqlite3.Row
-            row = conn.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
+            row = conn.execute(
+                f"SELECT * FROM memories WHERE id = ? AND {_NOT_EXPIRED}",
+                (memory_id,),
+            ).fetchone()
             if row is None:
                 return None
             # Touch access
@@ -192,7 +216,7 @@ class SQLiteBackend:
                     SELECT m.*, rank AS _score
                     FROM memories m
                     JOIN memories_fts fts ON m.id = fts.rowid
-                    WHERE memories_fts MATCH ? {ns_filter}
+                    WHERE memories_fts MATCH ? AND {_NOT_EXPIRED} {ns_filter}
                     ORDER BY rank, m.importance DESC
                     LIMIT ?
                     """,
@@ -221,7 +245,7 @@ class SQLiteBackend:
                 rows = conn.execute(
                     f"""
                     SELECT * FROM memories
-                    WHERE content LIKE ? {ns_like}
+                    WHERE content LIKE ? AND {_NOT_EXPIRED} {ns_like}
                     ORDER BY importance DESC
                     LIMIT ?
                     """,
@@ -240,10 +264,10 @@ class SQLiteBackend:
         limit: int = 10,
     ) -> list[SearchResult]:
         """Brute-force cosine similarity against stored embeddings."""
-        ns_filter = ""
+        ns_filter = f"WHERE {_NOT_EXPIRED}"
         params: list[Any] = []
         if namespace:
-            ns_filter = "WHERE namespace = ?"
+            ns_filter += " AND namespace = ?"
             params.append(namespace)
 
         with self._conn() as conn:
@@ -269,7 +293,7 @@ class SQLiteBackend:
         limit: int = 50,
         offset: int = 0,
     ) -> list[MemoryEntry]:
-        clauses: list[str] = []
+        clauses: list[str] = [_NOT_EXPIRED]
         params: list[Any] = []
 
         if namespace:
@@ -348,30 +372,36 @@ class SQLiteBackend:
         return self.get(memory_id)
 
     def stats(self, namespace: str | None = None) -> dict[str, Any]:
-        ns_filter = ""
+        base_filter = f"WHERE {_NOT_EXPIRED}"
         params: list[Any] = []
         if namespace:
-            ns_filter = "WHERE namespace = ?"
+            base_filter += " AND namespace = ?"
             params.append(namespace)
 
         with self._conn() as conn:
             conn.row_factory = sqlite3.Row
             total = conn.execute(
-                f"SELECT COUNT(*) AS count FROM memories {ns_filter}", params
+                f"SELECT COUNT(*) AS count FROM memories {base_filter}", params
             ).fetchone()["count"]
 
             by_type = conn.execute(
                 f"SELECT memory_type, COUNT(*) AS count FROM memories "
-                f"{ns_filter} GROUP BY memory_type",
+                f"{base_filter} GROUP BY memory_type",
                 params,
             ).fetchall()
 
             avg_imp = (
                 conn.execute(
-                    f"SELECT AVG(importance) AS avg FROM memories {ns_filter}", params
+                    f"SELECT AVG(importance) AS avg FROM memories {base_filter}", params
                 ).fetchone()["avg"]
                 or 0
             )
+
+            emb_count = conn.execute(
+                f"SELECT COUNT(*) AS count FROM memories {base_filter} "
+                "AND embedding IS NOT NULL",
+                params,
+            ).fetchone()["count"]
 
             db_size = self.db_path.stat().st_size / (1024 * 1024) if self.db_path.exists() else 0
 
@@ -381,6 +411,8 @@ class SQLiteBackend:
             "average_importance": round(avg_imp, 2),
             "db_size_mb": round(db_size, 2),
             "namespace": namespace,
+            "embeddings_count": emb_count,
+            "embeddings_coverage": round(emb_count / max(total, 1) * 100, 1),
         }
 
     def get_priority_memories(
@@ -390,7 +422,7 @@ class SQLiteBackend:
         limit: int = 20,
         min_importance: int = 7,
     ) -> list[MemoryEntry]:
-        clauses = ["importance >= ?"]
+        clauses = [_NOT_EXPIRED, "importance >= ?"]
         params: list[Any] = [min_importance]
         if namespace:
             clauses.append("(namespace = ? OR namespace = 'default')")
@@ -410,6 +442,58 @@ class SQLiteBackend:
             ).fetchall()
             return [_row_to_entry(r) for r in rows]
 
+    # ------------------------------------------------------------------
+    # Backfill & Cleanup
+    # ------------------------------------------------------------------
+
+    def list_memories_without_embeddings(
+        self,
+        *,
+        namespace: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[MemoryEntry]:
+        """Return memories that have no embedding stored."""
+        clauses = [_NOT_EXPIRED, "embedding IS NULL"]
+        params: list[Any] = []
+        if namespace:
+            clauses.append("namespace = ?")
+            params.append(namespace)
+        where = "WHERE " + " AND ".join(clauses)
+        params.extend([limit, offset])
+
+        with self._conn() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                f"SELECT * FROM memories {where} ORDER BY id LIMIT ? OFFSET ?",
+                params,
+            ).fetchall()
+            return [_row_to_entry(r) for r in rows]
+
+    def update_embedding(self, memory_id: int, embedding: list[float]) -> None:
+        """Update just the embedding column for a single memory."""
+        blob = _encode_embedding(embedding)
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE memories SET embedding = ? WHERE id = ?",
+                (blob, memory_id),
+            )
+            conn.commit()
+
+    def delete_expired(self, *, namespace: str | None = None) -> int:
+        """Physically remove all expired memories."""
+        clauses = ["expires_at IS NOT NULL", "expires_at <= datetime('now')"]
+        params: list[Any] = []
+        if namespace:
+            clauses.append("namespace = ?")
+            params.append(namespace)
+        where = "WHERE " + " AND ".join(clauses)
+
+        with self._conn() as conn:
+            cur = conn.execute(f"DELETE FROM memories {where}", params)
+            conn.commit()
+            return cur.rowcount
+
 
 # ------------------------------------------------------------------
 # Helpers
@@ -420,6 +504,15 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
     tags = json.loads(row["tags"]) if row["tags"] else []
     metadata = json.loads(row["metadata"]) if row["metadata"] else {}
     embedding = _decode_embedding(row["embedding"])
+
+    expires_at = None
+    try:
+        raw = row["expires_at"]
+        if raw:
+            expires_at = _parse_dt(raw)
+    except (IndexError, KeyError):
+        pass  # Column may not exist in old DBs
+
     return MemoryEntry(
         id=row["id"],
         content=row["content"],
@@ -434,6 +527,7 @@ def _row_to_entry(row: sqlite3.Row) -> MemoryEntry:
         created_at=_parse_dt(row["created_at"]),
         accessed_at=_parse_dt(row["accessed_at"]),
         access_count=row["access_count"],
+        expires_at=expires_at,
     )
 
 
@@ -468,9 +562,18 @@ def _decode_embedding(blob: bytes | None) -> list[float] | None:
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
     if len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
-    norm_a = sum(x * x for x in a) ** 0.5
-    norm_b = sum(x * x for x in b) ** 0.5
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return dot / (norm_a * norm_b)
+    try:
+        import numpy as np
+
+        a_arr = np.asarray(a, dtype=np.float32)
+        b_arr = np.asarray(b, dtype=np.float32)
+        dot = np.dot(a_arr, b_arr)
+        norm = np.linalg.norm(a_arr) * np.linalg.norm(b_arr)
+        return float(dot / norm) if norm > 0 else 0.0
+    except ImportError:
+        dot = sum(x * y for x, y in zip(a, b))
+        norm_a = sum(x * x for x in a) ** 0.5
+        norm_b = sum(x * x for x in b) ** 0.5
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)

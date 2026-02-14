@@ -36,6 +36,11 @@ TOOL_DEFINITIONS = [
                     "type": "string",
                     "description": "Memory namespace (default: 'default')",
                 },
+                "ttl_days": {
+                    "type": "integer",
+                    "description": "Auto-expire after N days (optional, null = never)",
+                    "minimum": 1,
+                },
             },
             "required": ["content"],
         },
@@ -233,6 +238,35 @@ PRO_TOOL_DEFINITIONS = [
                 "project": {
                     "type": "string",
                     "description": "Recover context for a specific project",
+                },
+            },
+        },
+    },
+    {
+        "name": "memory_backfill_embeddings",
+        "description": (
+            "Generate embeddings for memories stored before semantic search was enabled."
+            " Run this once to enable semantic search on existing memories."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "description": "Namespace to backfill (default: 'default')",
+                },
+            },
+        },
+    },
+    {
+        "name": "memory_cleanup_expired",
+        "description": "Permanently remove memories that have passed their expiry date.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "description": "Namespace to clean up",
                 },
             },
         },

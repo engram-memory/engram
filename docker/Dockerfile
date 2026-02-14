@@ -6,7 +6,7 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 COPY server/ server/
 
-RUN pip install --no-cache-dir ".[server]"
+RUN pip install --no-cache-dir ".[server,embeddings]"
 
 EXPOSE 8100
 

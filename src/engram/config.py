@@ -14,7 +14,7 @@ class EngramConfig(BaseModel):
         default_factory=lambda: Path.home() / ".engram" / "memory.db",
     )
     storage_backend: str = "sqlite"
-    enable_embeddings: bool = False
+    enable_embeddings: bool = True
     embedding_model: str = "all-MiniLM-L6-v2"
     default_namespace: str = "default"
     auto_decay: bool = False

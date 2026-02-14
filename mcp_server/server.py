@@ -14,7 +14,7 @@ from engram.sessions import SessionManager
 from mcp_server.tools import PRO_TOOL_DEFINITIONS, TOOL_DEFINITIONS
 
 app = Server("engram")
-_config = EngramConfig()
+_config = EngramConfig(enable_embeddings=True)
 _memories: dict[str, Memory] = {}
 _sessions: SessionManager | None = None
 
@@ -63,6 +63,7 @@ def _dispatch(name: str, args: dict) -> dict:
             importance=args.get("importance", 5),
             tags=args.get("tags", []),
             namespace=ns,
+            ttl_days=args.get("ttl_days"),
         )
         return {"id": mid, "duplicate": mid is None, "status": "stored"}
 
@@ -166,6 +167,16 @@ def _dispatch(name: str, args: dict) -> dict:
 
     if name == "memory_recover":
         return {"recovery": _sess().recover_context(project=args.get("project"))}
+
+    # -- Pro Tools: Backfill & Cleanup --
+
+    if name == "memory_backfill_embeddings":
+        count = mem.backfill_embeddings(namespace=ns)
+        return {"backfilled": count, "status": "completed"}
+
+    if name == "memory_cleanup_expired":
+        count = mem.cleanup_expired(namespace=ns)
+        return {"removed": count, "status": "completed"}
 
     return {"error": f"Unknown tool: {name}"}
 

@@ -14,6 +14,7 @@ class StoreRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     namespace: str | None = None
+    ttl_days: int | None = Field(default=None, ge=1)
 
 
 class UpdateRequest(BaseModel):
@@ -57,6 +58,8 @@ class StatsResponse(BaseModel):
     average_importance: float
     db_size_mb: float
     namespace: str | None
+    embeddings_count: int = 0
+    embeddings_coverage: float = 0.0
 
 
 class HealthResponse(BaseModel):

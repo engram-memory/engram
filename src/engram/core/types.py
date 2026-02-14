@@ -39,6 +39,7 @@ class MemoryEntry(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     accessed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     access_count: int = 0
+    expires_at: datetime | None = None
 
     def compute_hash(self) -> str:
         """SHA-256 content hash (first 16 hex chars) for deduplication."""

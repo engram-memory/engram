@@ -93,7 +93,7 @@ def _mem(user: AuthUser, namespace: str) -> Memory:
 
     cache_key = f"{user.id}:{namespace}"
     if cache_key not in _memories:
-        config = EngramConfig(db_path=db_path)
+        config = EngramConfig(db_path=db_path, enable_embeddings=True)
         _memories[cache_key] = Memory(config=config, namespace=namespace)
     return _memories[cache_key]
 
@@ -213,6 +213,7 @@ async def store_memory(
         tags=body.tags,
         metadata=body.metadata,
         namespace=ns,
+        ttl_days=body.ttl_days,
     )
     await manager.broadcast(ns, "memory_stored", {"id": mid})
     return StoreResponse(id=mid, duplicate=mid is None)
@@ -359,6 +360,32 @@ def import_memories(
 ):
     count = _mem(user, namespace).import_memories(body.data)
     return {"imported": count}
+
+
+# ------------------------------------------------------------------
+# Backfill & Cleanup (Pro)
+# ------------------------------------------------------------------
+
+
+@app.post("/v1/backfill-embeddings")
+def backfill_embeddings(
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """Generate embeddings for memories that don't have them."""
+    _check_semantic_search(user, True)
+    count = _mem(user, namespace).backfill_embeddings(namespace=namespace)
+    return {"backfilled": count}
+
+
+@app.post("/v1/cleanup-expired")
+def cleanup_expired(
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """Permanently remove expired memories."""
+    count = _mem(user, namespace).cleanup_expired(namespace=namespace)
+    return {"removed": count}
 
 
 # ------------------------------------------------------------------

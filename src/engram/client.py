@@ -36,12 +36,21 @@ class Memory:
         self._namespace = namespace or self._config.default_namespace
         self._backend = SQLiteBackend(self._config.db_path)
 
-        # Optional embedding provider
+        # Optional embedding provider (graceful fallback)
         self._embedder = None
         if self._config.enable_embeddings:
-            from engram.embeddings.local import LocalEmbedding
+            try:
+                from engram.embeddings.local import LocalEmbedding
 
-            self._embedder = LocalEmbedding(self._config.embedding_model)
+                self._embedder = LocalEmbedding(self._config.embedding_model)
+            except ImportError:
+                import warnings
+
+                warnings.warn(
+                    "sentence-transformers not installed. Embeddings disabled. "
+                    "Install with: pip install engram-core[embeddings]",
+                    stacklevel=2,
+                )
 
     # ------------------------------------------------------------------
     # Public API
@@ -56,8 +65,15 @@ class Memory:
         tags: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         namespace: str | None = None,
+        ttl_days: int | None = None,
     ) -> int | None:
         """Store a memory. Returns the id, or ``None`` if duplicate."""
+        from datetime import timedelta
+
+        expires_at = None
+        if ttl_days is not None and ttl_days > 0:
+            expires_at = datetime.now(timezone.utc) + timedelta(days=ttl_days)
+
         entry = MemoryEntry(
             content=content,
             memory_type=MemoryType(type),
@@ -65,6 +81,7 @@ class Memory:
             namespace=namespace or self._namespace,
             tags=tags or [],
             metadata=metadata or {},
+            expires_at=expires_at,
         )
         if self._embedder:
             entry.embedding = self._embedder.embed(content)
@@ -165,6 +182,30 @@ class Memory:
             )
             conn.commit()
             return cur.rowcount
+
+    def backfill_embeddings(self, *, namespace: str | None = None, batch_size: int = 100) -> int:
+        """Generate embeddings for memories that don't have them. Returns count."""
+        if not self._embedder:
+            return 0
+        ns = namespace or self._namespace
+        count = 0
+        offset = 0
+        while True:
+            entries = self._backend.list_memories_without_embeddings(
+                namespace=ns, limit=batch_size, offset=offset,
+            )
+            if not entries:
+                break
+            for entry in entries:
+                embedding = self._embedder.embed(entry.content)
+                self._backend.update_embedding(entry.id, embedding)
+                count += 1
+            offset += batch_size
+        return count
+
+    def cleanup_expired(self, *, namespace: str | None = None) -> int:
+        """Permanently delete expired memories. Returns count of removed entries."""
+        return self._backend.delete_expired(namespace=namespace or self._namespace)
 
     def export_memories(
         self,
