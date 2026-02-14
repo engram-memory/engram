@@ -412,6 +412,80 @@ class SQLiteBackend:
             "embeddings_coverage": round(emb_count / max(total, 1) * 100, 1),
         }
 
+    def get_analytics(self, namespace: str = "default", days: int = 90) -> dict:
+        """Gather analytics data for the Pro dashboard."""
+        with self._conn() as conn:
+            conn.row_factory = sqlite3.Row
+            # Memory growth per day (last N days)
+            growth_rows = conn.execute(
+                "SELECT DATE(created_at) as date, COUNT(*) as count "
+                "FROM memories WHERE namespace = ? "
+                "AND created_at >= datetime('now', ? || ' days') "
+                "GROUP BY DATE(created_at) ORDER BY date",
+                (namespace, f"-{days}"),
+            ).fetchall()
+            growth = [{"date": r["date"], "count": r["count"]} for r in growth_rows]
+
+            # Top tags by frequency
+            tag_rows = conn.execute(
+                "SELECT je.value as tag, COUNT(*) as count "
+                "FROM memories, json_each(memories.tags) je "
+                "WHERE memories.namespace = ? "
+                "GROUP BY tag ORDER BY count DESC LIMIT 20",
+                (namespace,),
+            ).fetchall()
+            tags = [{"tag": r["tag"], "count": r["count"]} for r in tag_rows]
+
+            # Namespace overview (cross-namespace)
+            ns_rows = conn.execute(
+                "SELECT namespace, COUNT(*) as count, "
+                "ROUND(AVG(importance), 1) as avg_importance, "
+                "MAX(created_at) as latest "
+                "FROM memories GROUP BY namespace ORDER BY count DESC"
+            ).fetchall()
+            namespaces = [
+                {
+                    "namespace": r["namespace"],
+                    "count": r["count"],
+                    "avg_importance": r["avg_importance"],
+                    "latest": r["latest"],
+                }
+                for r in ns_rows
+            ]
+
+            # Importance distribution (1-10)
+            dist_rows = conn.execute(
+                "SELECT importance, COUNT(*) as count "
+                "FROM memories WHERE namespace = ? "
+                "GROUP BY importance ORDER BY importance",
+                (namespace,),
+            ).fetchall()
+            distribution = {r["importance"]: r["count"] for r in dist_rows}
+
+            # Memory types breakdown
+            type_rows = conn.execute(
+                "SELECT memory_type, COUNT(*) as count "
+                "FROM memories WHERE namespace = ? "
+                "GROUP BY memory_type ORDER BY count DESC",
+                (namespace,),
+            ).fetchall()
+            types = {r["memory_type"]: r["count"] for r in type_rows}
+
+            total = conn.execute(
+                "SELECT COUNT(*) as count FROM memories WHERE namespace = ?",
+                (namespace,),
+            ).fetchone()["count"]
+
+        return {
+            "growth": growth,
+            "tags": tags,
+            "namespaces": namespaces,
+            "distribution": distribution,
+            "types": types,
+            "total_memories": total,
+            "period_days": days,
+        }
+
     def get_priority_memories(
         self,
         *,

@@ -93,6 +93,16 @@ class ContextResponse(BaseModel):
     memory_ids: list[int] = Field(default_factory=list)
 
 
+class AnalyticsResponse(BaseModel):
+    growth: list[dict[str, Any]]
+    tags: list[dict[str, Any]]
+    namespaces: list[dict[str, Any]]
+    distribution: dict[int, int]
+    types: dict[str, int]
+    total_memories: int
+    period_days: int
+
+
 class SessionSaveRequest(BaseModel):
     summary: str
     project: str | None = None

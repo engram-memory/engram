@@ -28,6 +28,7 @@ from server.auth.routes import router as auth_router
 from server.billing.routes import router as billing_router
 from server.demo_routes import router as demo_router
 from server.models import (
+    AnalyticsResponse,
     ContextRequest,
     ContextResponse,
     ExportRequest,
@@ -367,6 +368,20 @@ def get_stats(
     namespace: str = Depends(get_namespace),
 ):
     return _mem(user, namespace).stats()
+
+
+@app.get("/v1/analytics", response_model=AnalyticsResponse)
+def get_analytics(
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+    days: int = Query(90, ge=7, le=365),
+):
+    """Pro analytics dashboard data."""
+    if not user.limits.analytics:
+        raise HTTPException(
+            403, "Analytics is a Pro feature. Upgrade at https://engram-ai.dev/#pricing"
+        )
+    return _mem(user, namespace).analytics(namespace=namespace, days=days)
 
 
 @app.post("/v1/export")

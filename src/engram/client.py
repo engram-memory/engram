@@ -175,6 +175,10 @@ class Memory:
         """Return aggregate statistics."""
         return self._backend.stats(namespace=namespace or self._namespace)
 
+    def analytics(self, *, namespace: str | None = None, days: int = 90) -> dict:
+        """Return analytics data for the Pro dashboard."""
+        return self._backend.get_analytics(namespace=namespace or self._namespace, days=days)
+
     def prune(
         self,
         *,
