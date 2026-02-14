@@ -38,15 +38,16 @@ def init_admin_db() -> None:
                 last_login_at TIMESTAMP
             )
         """)
-        # Add Stripe columns if upgrading from older schema
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN stripe_customer_id TEXT")
-        except sqlite3.OperationalError:
-            pass  # column already exists
-        try:
-            c.execute("ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT")
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        # Add columns if upgrading from older schema
+        for col in [
+            "ALTER TABLE users ADD COLUMN stripe_customer_id TEXT",
+            "ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT",
+            "ALTER TABLE users ADD COLUMN trial_end TIMESTAMP",
+        ]:
+            try:
+                c.execute(col)
+            except sqlite3.OperationalError:
+                pass  # column already exists
         c.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
                 id TEXT PRIMARY KEY,
@@ -70,11 +71,17 @@ def init_admin_db() -> None:
 # ------------------------------------------------------------------
 
 
-def create_user(user_id: str, email: str, password_hash: str, tier: str = "free") -> dict:
+def create_user(
+    user_id: str,
+    email: str,
+    password_hash: str,
+    tier: str = "free",
+    trial_end: str | None = None,
+) -> dict:
     with _conn() as c:
         c.execute(
-            "INSERT INTO users (id, email, password_hash, tier) VALUES (?, ?, ?, ?)",
-            (user_id, email, password_hash, tier),
+            "INSERT INTO users (id, email, password_hash, tier, trial_end) VALUES (?, ?, ?, ?, ?)",
+            (user_id, email, password_hash, tier, trial_end),
         )
         c.commit()
     return get_user_by_id(user_id)
@@ -104,6 +111,23 @@ def update_last_login(user_id: str) -> None:
 def update_user_tier(user_id: str, tier: str) -> None:
     with _conn() as c:
         c.execute("UPDATE users SET tier = ? WHERE id = ?", (tier, user_id))
+        c.commit()
+
+
+def clear_user_trial(user_id: str) -> None:
+    """Clear the trial_end timestamp (user paid or trial expired)."""
+    with _conn() as c:
+        c.execute("UPDATE users SET trial_end = NULL WHERE id = ?", (user_id,))
+        c.commit()
+
+
+def expire_trial(user_id: str) -> None:
+    """Downgrade user to free and clear trial_end."""
+    with _conn() as c:
+        c.execute(
+            "UPDATE users SET tier = 'free', trial_end = NULL WHERE id = ?",
+            (user_id,),
+        )
         c.commit()
 
 

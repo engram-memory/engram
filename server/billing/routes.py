@@ -185,6 +185,8 @@ def _find_or_create_user(email: str, stripe_customer_id: str, tier: str) -> str:
     # Try by Stripe customer ID first
     user = db.get_user_by_stripe_customer_id(stripe_customer_id)
     if user:
+        # User paid — clear any active trial
+        db.clear_user_trial(user["id"])
         return user["id"]
 
     # Try by email
@@ -192,9 +194,10 @@ def _find_or_create_user(email: str, stripe_customer_id: str, tier: str) -> str:
     if user:
         db.update_stripe_customer_id(user["id"], stripe_customer_id)
         db.update_user_tier(user["id"], tier)
+        db.clear_user_trial(user["id"])  # Trial → Paid
         return user["id"]
 
-    # Create new user
+    # Create new user (paid directly, no trial)
     user_id = str(uuid.uuid4())
     temp_pw = hash_password(uuid.uuid4().hex)
     db.create_user(user_id, email, temp_pw, tier=tier)

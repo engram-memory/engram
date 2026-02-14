@@ -62,4 +62,6 @@ class UserWithLimits(BaseModel):
     id: str
     email: str
     tier: str
+    trial_end: str | None = None
+    trial_days_remaining: int | None = None
     limits: dict

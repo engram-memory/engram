@@ -223,7 +223,34 @@ nav {
 }
 .tier-free { background: #1e1e35; color: var(--text-secondary); }
 .tier-pro { background: linear-gradient(135deg, #6B46C130, #06B6D430); color: var(--cyan-light); border: 1px solid var(--purple); }
+.tier-trial { background: linear-gradient(135deg, #6B46C130, #06B6D430); color: var(--cyan-light); border: 1px solid var(--cyan); }
 .tier-enterprise { background: linear-gradient(135deg, #F59E0B20, #EF444420); color: var(--yellow); border: 1px solid var(--yellow); }
+
+.trial-banner {
+  background: linear-gradient(135deg, #6B46C120, #06B6D420);
+  border: 1px solid var(--cyan);
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.trial-banner .trial-text { font-size: 0.9rem; color: var(--text-primary); }
+.trial-banner .trial-days { font-size: 1.4rem; font-weight: 800; color: var(--cyan-light); }
+.trial-banner .trial-cta {
+  padding: 8px 20px;
+  background: var(--gradient);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+}
 
 /* Cards */
 .card {
@@ -525,6 +552,15 @@ nav {
       <span class="tier-badge" id="tierBadge"></span>
     </div>
 
+    <!-- Trial Banner -->
+    <div class="trial-banner" id="trialBanner" style="display:none">
+      <div>
+        <div class="trial-text">Pro Trial: <span class="trial-days" id="trialDays">7</span> days remaining</div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px">All Pro features unlocked. No credit card required.</div>
+      </div>
+      <a href="/#pricing" class="trial-cta">Upgrade to Pro</a>
+    </div>
+
     <!-- Usage -->
     <div class="card" id="usageCard">
       <div class="card-header">
@@ -690,18 +726,30 @@ async function loadUser() {
 
   const badge = document.getElementById('tierBadge');
   const tier = data.tier;
-  badge.textContent = tier.toUpperCase();
-  badge.className = 'tier-badge tier-' + tier;
+  const isTrial = data.trial_days_remaining !== null && data.trial_days_remaining !== undefined && tier === 'pro';
 
-  document.getElementById('billingTier').textContent =
-    tier === 'free' ? 'Free (Self-Hosted)' : tier === 'pro' ? 'Pro (Cloud API)' : 'Enterprise';
-
-  if (tier === 'free') {
+  if (isTrial) {
+    badge.textContent = 'PRO TRIAL';
+    badge.className = 'tier-badge tier-trial';
+    document.getElementById('trialBanner').style.display = 'flex';
+    document.getElementById('trialDays').textContent = data.trial_days_remaining;
+    document.getElementById('billingTier').textContent = 'Pro Trial (' + data.trial_days_remaining + ' days left)';
     document.getElementById('upgradeBtn').style.display = 'inline-block';
     document.getElementById('portalBtn').style.display = 'none';
   } else {
-    document.getElementById('upgradeBtn').style.display = 'none';
-    document.getElementById('portalBtn').style.display = 'inline-block';
+    badge.textContent = tier.toUpperCase();
+    badge.className = 'tier-badge tier-' + tier;
+    document.getElementById('trialBanner').style.display = 'none';
+    document.getElementById('billingTier').textContent =
+      tier === 'free' ? 'Free (Self-Hosted)' : tier === 'pro' ? 'Pro (Cloud API)' : 'Enterprise';
+
+    if (tier === 'free') {
+      document.getElementById('upgradeBtn').style.display = 'inline-block';
+      document.getElementById('portalBtn').style.display = 'none';
+    } else {
+      document.getElementById('upgradeBtn').style.display = 'none';
+      document.getElementById('portalBtn').style.display = 'inline-block';
+    }
   }
 }
 

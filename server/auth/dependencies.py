@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, Request
 
 from server.auth.api_keys import validate_api_key
 from server.auth.jwt_handler import decode_token
 from server.tiers import TierLimits, get_tier
+
+log = logging.getLogger(__name__)
 
 CLOUD_MODE = os.environ.get("ENGRAM_CLOUD_MODE", "").lower() in ("1", "true", "yes")
 
@@ -31,6 +35,31 @@ class AuthUser:
         return get_tier(self.tier)
 
 
+def _check_trial_expiry(user_row: dict) -> dict:
+    """Check if user's trial has expired. Auto-downgrades if so. Returns updated user dict."""
+    trial_end = user_row.get("trial_end")
+    if not trial_end:
+        return user_row
+
+    try:
+        end_dt = datetime.fromisoformat(trial_end)
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return user_row
+
+    if datetime.now(timezone.utc) >= end_dt:
+        from server.auth.database import expire_trial
+
+        expire_trial(user_row["id"])
+        log.info("Trial expired for user %s (%s), downgraded to free", user_row["id"], user_row["email"])
+        user_row = dict(user_row)
+        user_row["tier"] = "free"
+        user_row["trial_end"] = None
+
+    return user_row
+
+
 def require_auth(request: Request) -> AuthUser:
     """FastAPI dependency: require authentication. Returns AuthUser.
 
@@ -50,6 +79,7 @@ def require_auth(request: Request) -> AuthUser:
 
             user = get_user_by_id(payload["sub"])
             if user:
+                user = _check_trial_expiry(user)
                 return AuthUser(
                     id=user["id"],
                     email=user["email"],
@@ -63,7 +93,7 @@ def require_auth(request: Request) -> AuthUser:
     if api_key:
         record = validate_api_key(api_key)
         if record:
-            user = record["user"]
+            user = _check_trial_expiry(record["user"])
             return AuthUser(
                 id=user["id"],
                 email=user["email"],

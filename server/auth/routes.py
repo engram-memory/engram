@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -27,6 +27,9 @@ from server.tiers import get_tier
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 
+TRIAL_DAYS = 7
+
+
 @router.post("/register", response_model=TokenResponse)
 def register(body: RegisterRequest):
     existing = db.get_user_by_email(body.email)
@@ -35,9 +38,10 @@ def register(body: RegisterRequest):
 
     user_id = str(uuid.uuid4())
     pw_hash = hash_password(body.password)
-    db.create_user(user_id, body.email, pw_hash)
+    trial_end = (datetime.now(timezone.utc) + timedelta(days=TRIAL_DAYS)).isoformat()
+    db.create_user(user_id, body.email, pw_hash, tier="pro", trial_end=trial_end)
 
-    access_token, expires_in = create_access_token(user_id, "free")
+    access_token, expires_in = create_access_token(user_id, "pro")
     refresh_token = create_refresh_token(user_id)
 
     return TokenResponse(
@@ -92,10 +96,27 @@ def refresh(body: RefreshRequest):
 @router.get("/me", response_model=UserWithLimits)
 def get_me(user: AuthUser = Depends(require_auth)):
     tier = get_tier(user.tier)
+    user_record = db.get_user_by_id(user.id)
+    trial_end = user_record.get("trial_end") if user_record else None
+
+    # Calculate days remaining
+    trial_days_remaining = None
+    if trial_end:
+        try:
+            end_dt = datetime.fromisoformat(trial_end)
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=timezone.utc)
+            remaining = (end_dt - datetime.now(timezone.utc)).days
+            trial_days_remaining = max(0, remaining)
+        except (ValueError, TypeError):
+            pass
+
     return UserWithLimits(
         id=user.id,
         email=user.email,
         tier=user.tier,
+        trial_end=trial_end,
+        trial_days_remaining=trial_days_remaining,
         limits={
             "max_memories": tier.max_memories,
             "max_storage_mb": tier.max_storage_mb,
