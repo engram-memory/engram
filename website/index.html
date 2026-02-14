@@ -400,6 +400,261 @@ nav.scrolled { border-bottom-color: var(--border); }
   color: var(--text-secondary);
 }
 
+/* ========== PLAYGROUND ========== */
+.playground {
+  background: var(--bg-primary);
+  text-align: center;
+}
+
+.playground-widget {
+  max-width: 800px;
+  margin: 48px auto 0;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px #00000060, 0 0 60px var(--purple-glow);
+  text-align: left;
+}
+
+.pg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: #0a0a12;
+  border-bottom: 1px solid var(--border);
+}
+
+.pg-header .code-dot { flex-shrink: 0; }
+
+.pg-title {
+  margin-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.pg-status {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pg-status .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+
+.pg-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: #0d0d16;
+}
+
+.pg-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.pg-tab:hover { color: var(--text-secondary); }
+.pg-tab.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  background: #0a0a1208;
+}
+
+.pg-body {
+  padding: 24px;
+  min-height: 320px;
+}
+
+.pg-panel { display: none; }
+.pg-panel.active { display: block; }
+
+.pg-input-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pg-input {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pg-input:focus { border-color: var(--purple); }
+.pg-input::placeholder { color: var(--text-muted); }
+
+.pg-btn {
+  padding: 12px 24px;
+  background: var(--gradient);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.pg-btn:hover { opacity: 0.9; }
+.pg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pg-store-options {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pg-select {
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.pg-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.pg-slider-group input[type="range"] {
+  width: 80px;
+  accent-color: var(--purple);
+}
+
+.pg-results {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pg-result-card {
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+  animation: pgSlideIn 0.3s ease;
+}
+
+.pg-result-card:hover { border-color: var(--border-glow); }
+
+@keyframes pgSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pg-result-content {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.pg-result-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.pg-result-meta .tag {
+  padding: 2px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--cyan);
+}
+
+.pg-result-meta .type-badge {
+  padding: 2px 8px;
+  background: #6B46C118;
+  border-radius: 4px;
+  color: var(--purple-light);
+}
+
+.pg-result-meta .score {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.pg-result-meta .importance {
+  color: var(--yellow);
+}
+
+.pg-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.pg-msg {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  animation: pgSlideIn 0.3s ease;
+}
+
+.pg-msg.success {
+  background: #10B98118;
+  border: 1px solid #10B98140;
+  color: var(--green);
+}
+
+.pg-msg.error {
+  background: #EF444418;
+  border: 1px solid #EF444440;
+  color: var(--red);
+}
+
+.pg-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .pg-input-group { flex-direction: column; }
+  .pg-store-options { flex-direction: column; }
+}
+
 /* ========== FEATURES ========== */
 .features { text-align: center; }
 
@@ -931,6 +1186,7 @@ footer {
       engram
     </a>
     <ul class="nav-links" id="navLinks">
+      <li><a href="#playground">Try Live</a></li>
       <li><a href="#features">Features</a></li>
       <li><a href="#comparison">Compare</a></li>
       <li><a href="#pricing">Pricing</a></li>
@@ -1023,6 +1279,82 @@ footer {
         <div class="stat-card" style="--i:2">
           <div class="stat-number gradient-text">&lt;1s</div>
           <div class="stat-label">memory recall latency with Engram</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PLAYGROUND ==================== -->
+<section class="playground" id="playground">
+  <div class="container">
+    <div class="fade-in">
+      <p class="section-label">Try it live</p>
+      <h2 class="section-title">See for yourself. <span class="gradient-text">No sign-up needed.</span></h2>
+      <p class="section-subtitle">Store a memory, search it, recall it. This is a real Engram instance running on our servers.</p>
+    </div>
+    <div class="playground-widget fade-in">
+      <div class="pg-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span class="pg-title">playground &mdash; engram-ai.dev</span>
+        <span class="pg-status"><span class="dot"></span> live</span>
+      </div>
+      <div class="pg-tabs">
+        <button class="pg-tab active" onclick="pgSwitchTab('store')">Store</button>
+        <button class="pg-tab" onclick="pgSwitchTab('search')">Search</button>
+        <button class="pg-tab" onclick="pgSwitchTab('recall')">Recall</button>
+      </div>
+      <div class="pg-body">
+        <!-- STORE TAB -->
+        <div class="pg-panel active" id="pg-store">
+          <div class="pg-input-group">
+            <input type="text" class="pg-input" id="pgStoreInput" placeholder="Type a memory, e.g. &quot;User prefers dark mode&quot;" maxlength="200">
+            <button class="pg-btn" id="pgStoreBtn" onclick="pgStore()">Store</button>
+          </div>
+          <div class="pg-store-options">
+            <select class="pg-select" id="pgStoreType">
+              <option value="fact">fact</option>
+              <option value="preference">preference</option>
+              <option value="decision">decision</option>
+              <option value="error_fix">error_fix</option>
+              <option value="pattern">pattern</option>
+            </select>
+            <div class="pg-slider-group">
+              <span>Importance:</span>
+              <input type="range" min="1" max="10" value="7" id="pgStoreImportance" oninput="document.getElementById('pgImpVal').textContent=this.value">
+              <span id="pgImpVal">7</span>
+            </div>
+          </div>
+          <div id="pgStoreResult"></div>
+          <p class="pg-hint">Memories are shared in a demo namespace. Max 200 characters. Rate limited to 10 req/min.</p>
+        </div>
+
+        <!-- SEARCH TAB -->
+        <div class="pg-panel" id="pg-search">
+          <div class="pg-input-group">
+            <input type="text" class="pg-input" id="pgSearchInput" placeholder="Search memories, e.g. &quot;dark mode&quot;" maxlength="100">
+            <button class="pg-btn" id="pgSearchBtn" onclick="pgSearch()">Search</button>
+          </div>
+          <div id="pgSearchResults" class="pg-results">
+            <div class="pg-empty">Type a query and hit Search to find matching memories.</div>
+          </div>
+        </div>
+
+        <!-- RECALL TAB -->
+        <div class="pg-panel" id="pg-recall">
+          <div class="pg-input-group">
+            <div class="pg-slider-group" style="flex:1">
+              <span>Min importance:</span>
+              <input type="range" min="1" max="10" value="5" id="pgRecallImportance" oninput="document.getElementById('pgRecallVal').textContent=this.value">
+              <span id="pgRecallVal">5</span>
+            </div>
+            <button class="pg-btn" id="pgRecallBtn" onclick="pgRecall()">Recall</button>
+          </div>
+          <div id="pgRecallResults" class="pg-results">
+            <div class="pg-empty">Hit Recall to load the most important memories.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1535,6 +1867,154 @@ function startCheckout() {
         '<br><br><a href="mailto:support@engram-ai.dev?subject=Pro%20Activation%20Issue" style="color:#22D3EE">Contact support</a>';
     });
 })();
+
+// ========== PLAYGROUND ==========
+const PG_API = 'https://api.engram-ai.dev/v1/demo';
+
+function pgSwitchTab(name) {
+  document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pg-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.pg-tab[onclick*="${name}"]`).classList.add('active');
+  document.getElementById('pg-' + name).classList.add('active');
+}
+
+// Enter key support
+document.addEventListener('DOMContentLoaded', () => {
+  const storeInput = document.getElementById('pgStoreInput');
+  const searchInput = document.getElementById('pgSearchInput');
+  if (storeInput) storeInput.addEventListener('keydown', e => { if (e.key === 'Enter') pgStore(); });
+  if (searchInput) searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') pgSearch(); });
+});
+
+function pgStore() {
+  const input = document.getElementById('pgStoreInput');
+  const btn = document.getElementById('pgStoreBtn');
+  const content = input.value.trim();
+  if (!content) { input.focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  fetch(PG_API + '/store', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: content,
+      type: document.getElementById('pgStoreType').value,
+      importance: parseInt(document.getElementById('pgStoreImportance').value),
+      tags: []
+    })
+  })
+  .then(r => {
+    if (r.status === 429) throw new Error('Rate limit reached. Wait a moment.');
+    if (!r.ok) throw new Error('Failed to store');
+    return r.json();
+  })
+  .then(data => {
+    document.getElementById('pgStoreResult').innerHTML =
+      '<div class="pg-msg success">Stored! Memory ID: ' + data.id + '. Switch to Search to find it.</div>';
+    input.value = '';
+  })
+  .catch(err => {
+    document.getElementById('pgStoreResult').innerHTML =
+      '<div class="pg-msg error">' + err.message + '</div>';
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.textContent = 'Store';
+  });
+}
+
+function pgSearch() {
+  const input = document.getElementById('pgSearchInput');
+  const btn = document.getElementById('pgSearchBtn');
+  const query = input.value.trim();
+  if (!query) { input.focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  fetch(PG_API + '/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: query, limit: 5 })
+  })
+  .then(r => {
+    if (r.status === 429) throw new Error('Rate limit reached. Wait a moment.');
+    if (!r.ok) throw new Error('Search failed');
+    return r.json();
+  })
+  .then(results => {
+    const container = document.getElementById('pgSearchResults');
+    if (results.length === 0) {
+      container.innerHTML = '<div class="pg-empty">No memories found for "' + query.replace(/</g,'&lt;') + '".</div>';
+      return;
+    }
+    container.innerHTML = results.map(r =>
+      '<div class="pg-result-card">' +
+        '<div class="pg-result-content">' + r.content.replace(/</g,'&lt;') + '</div>' +
+        '<div class="pg-result-meta">' +
+          '<span class="type-badge">' + r.type + '</span>' +
+          '<span class="importance">importance: ' + r.importance + '</span>' +
+          '<span class="score">score: ' + r.score + '</span>' +
+          (r.tags.length ? r.tags.map(t => '<span class="tag">' + t.replace(/</g,'&lt;') + '</span>').join('') : '') +
+        '</div>' +
+      '</div>'
+    ).join('');
+  })
+  .catch(err => {
+    document.getElementById('pgSearchResults').innerHTML =
+      '<div class="pg-msg error">' + err.message + '</div>';
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.textContent = 'Search';
+  });
+}
+
+function pgRecall() {
+  const btn = document.getElementById('pgRecallBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const minImp = parseInt(document.getElementById('pgRecallImportance').value);
+
+  fetch(PG_API + '/recall', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ limit: 10, min_importance: minImp })
+  })
+  .then(r => {
+    if (r.status === 429) throw new Error('Rate limit reached. Wait a moment.');
+    if (!r.ok) throw new Error('Recall failed');
+    return r.json();
+  })
+  .then(entries => {
+    const container = document.getElementById('pgRecallResults');
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="pg-empty">No memories with importance >= ' + minImp + '.</div>';
+      return;
+    }
+    container.innerHTML = entries.map(e =>
+      '<div class="pg-result-card">' +
+        '<div class="pg-result-content">' + e.content.replace(/</g,'&lt;') + '</div>' +
+        '<div class="pg-result-meta">' +
+          '<span class="type-badge">' + e.type + '</span>' +
+          '<span class="importance">importance: ' + e.importance + '</span>' +
+          (e.tags.length ? e.tags.map(t => '<span class="tag">' + t.replace(/</g,'&lt;') + '</span>').join('') : '') +
+        '</div>' +
+      '</div>'
+    ).join('');
+  })
+  .catch(err => {
+    document.getElementById('pgRecallResults').innerHTML =
+      '<div class="pg-msg error">' + err.message + '</div>';
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.textContent = 'Recall';
+  });
+}
 
 // Scroll animations (IntersectionObserver)
 const observer = new IntersectionObserver((entries) => {

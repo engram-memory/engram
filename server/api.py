@@ -26,6 +26,7 @@ from server.auth.database import init_admin_db
 from server.auth.dependencies import AuthUser, get_namespace, require_auth
 from server.auth.routes import router as auth_router
 from server.billing.routes import router as billing_router
+from server.demo_routes import router as demo_router
 from server.models import (
     ExportRequest,
     HealthResponse,
@@ -66,6 +67,7 @@ init_admin_db()
 app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(synapse_router)
+app.include_router(demo_router)
 
 if auth_deps.CLOUD_MODE:
     from server.middleware import RateLimitMiddleware
@@ -166,6 +168,7 @@ async def inject_auth_user(request: Request, call_next):
     if (
         auth_deps.CLOUD_MODE
         and not request.url.path.startswith("/v1/auth")
+        and not request.url.path.startswith("/v1/demo")
         and request.url.path != "/v1/health"
     ):
         try:

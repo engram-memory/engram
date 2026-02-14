@@ -48,8 +48,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not CLOUD_MODE:
             return await call_next(request)
 
-        # Skip rate limiting for auth routes and health
-        if request.url.path.startswith("/v1/auth") or request.url.path == "/v1/health":
+        # Skip rate limiting for auth, demo, and health routes
+        if (
+            request.url.path.startswith("/v1/auth")
+            or request.url.path.startswith("/v1/demo")
+            or request.url.path == "/v1/health"
+        ):
             return await call_next(request)
 
         # Get user from state (set by auth dependency)
