@@ -29,6 +29,8 @@ from server.billing.routes import router as billing_router
 from server.demo_routes import router as demo_router
 from server.models import (
     AnalyticsResponse,
+    AutoSaveConfigRequest,
+    CheckpointRequest,
     ContextRequest,
     ContextResponse,
     ExportRequest,
@@ -578,6 +580,91 @@ def traverse_graph(
     return _mem(user, namespace).graph(
         body.memory_id, max_depth=body.max_depth, relation=body.relation
     )
+
+
+# ------------------------------------------------------------------
+# Agent AutoSave (Pro — Phase 4)
+# ------------------------------------------------------------------
+
+_autosavers: dict[str, Any] = {}
+
+
+def _get_autosaver(user: AuthUser, project: str | None = None) -> Any:
+    from engram.autosave import AutoSave
+
+    key = f"{user.id}:{project or '__default__'}"
+    if key not in _autosavers:
+        _autosavers[key] = AutoSave(_sess(user), project=project)
+    return _autosavers[key]
+
+
+@app.post("/v1/autosave/configure")
+def configure_autosave(
+    body: AutoSaveConfigRequest,
+    user: AuthUser = Depends(require_auth),
+):
+    """Configure autosave triggers."""
+    _check_pro(user)
+    saver = _get_autosaver(user, body.project)
+    cfg = saver.configure(
+        enabled=body.enabled,
+        interval_seconds=body.interval_minutes * 60,
+        message_threshold=body.message_threshold,
+        ram_threshold_pct=body.ram_threshold_pct,
+    )
+    return {"status": "configured", "config": cfg.to_dict()}
+
+
+@app.get("/v1/autosave/status")
+def autosave_status(
+    user: AuthUser = Depends(require_auth),
+    project: str | None = Query(None),
+):
+    """Get current autosave status."""
+    _check_pro(user)
+    key = f"{user.id}:{project or '__default__'}"
+    if key not in _autosavers:
+        return {
+            "status": "not_configured",
+            "hint": "Use POST /v1/autosave/configure to enable autosave",
+        }
+    return _autosavers[key].status()
+
+
+@app.post("/v1/autosave/checkpoint")
+async def create_checkpoint(
+    body: CheckpointRequest,
+    user: AuthUser = Depends(require_auth),
+    namespace: str = Depends(get_namespace),
+):
+    """Create an incremental checkpoint with delta tracking."""
+    _check_pro(user)
+    key = f"{user.id}:{body.project or '__default__'}"
+    if key in _autosavers:
+        result = _autosavers[key].checkpoint(reason=body.reason)
+    else:
+        result = _sess(user).save_checkpoint(
+            project=body.project,
+            summary=body.summary or f"[checkpoint:{body.reason}]",
+            key_facts=body.key_facts or None,
+            open_tasks=body.open_tasks or None,
+        )
+        result["reason"] = body.reason
+    await manager.broadcast(namespace, "checkpoint_created", {"reason": body.reason})
+    return result
+
+
+@app.post("/v1/autosave/restore")
+def restore_checkpoint(
+    user: AuthUser = Depends(require_auth),
+    project: str | None = Query(None),
+):
+    """Restore from the latest checkpoint."""
+    _check_pro(user)
+    result = _sess(user).load_checkpoint(project=project)
+    if result is None:
+        raise HTTPException(404, "No checkpoint found")
+    return result
 
 
 # ------------------------------------------------------------------

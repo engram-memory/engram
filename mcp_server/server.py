@@ -8,15 +8,22 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 
+from engram.autosave import AutoSave
 from engram.client import Memory
 from engram.config import EngramConfig
 from engram.sessions import SessionManager
-from mcp_server.tools import LINK_TOOL_DEFINITIONS, PRO_TOOL_DEFINITIONS, TOOL_DEFINITIONS
+from mcp_server.tools import (
+    AUTOSAVE_TOOL_DEFINITIONS,
+    LINK_TOOL_DEFINITIONS,
+    PRO_TOOL_DEFINITIONS,
+    TOOL_DEFINITIONS,
+)
 
 app = Server("engram")
 _config = EngramConfig(enable_embeddings=True)
 _memories: dict[str, Memory] = {}
 _sessions: SessionManager | None = None
+_autosavers: dict[str, AutoSave] = {}
 
 
 def _mem(namespace: str = "default") -> Memory:
@@ -39,7 +46,9 @@ def _sess() -> SessionManager:
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
-    all_tools = TOOL_DEFINITIONS + PRO_TOOL_DEFINITIONS + LINK_TOOL_DEFINITIONS
+    all_tools = (
+        TOOL_DEFINITIONS + PRO_TOOL_DEFINITIONS + LINK_TOOL_DEFINITIONS + AUTOSAVE_TOOL_DEFINITIONS
+    )
     return [Tool(**td) for td in all_tools]
 
 
@@ -228,6 +237,51 @@ def _dispatch(name: str, args: dict) -> dict:
             relation=args.get("relation"),
         )
         return graph
+
+    # -- Pro Tools: Agent AutoSave --
+
+    if name == "memory_checkpoint":
+        project = args.get("project")
+        key = project or "__default__"
+        if key in _autosavers:
+            result = _autosavers[key].checkpoint(reason=args.get("reason", "manual"))
+        else:
+            result = _sess().save_checkpoint(
+                project=project,
+                summary=args.get("summary") or f"[checkpoint:{args.get('reason', 'manual')}]",
+                key_facts=args.get("key_facts"),
+                open_tasks=args.get("open_tasks"),
+            )
+            result["reason"] = args.get("reason", "manual")
+        return result
+
+    if name == "memory_autosave_configure":
+        project = args.get("project")
+        key = project or "__default__"
+        if key not in _autosavers:
+            _autosavers[key] = AutoSave(_sess(), project=project)
+        saver = _autosavers[key]
+        config_args = {}
+        if "enabled" in args:
+            config_args["enabled"] = args["enabled"]
+        if "interval_minutes" in args:
+            config_args["interval_seconds"] = args["interval_minutes"] * 60
+        if "message_threshold" in args:
+            config_args["message_threshold"] = args["message_threshold"]
+        if "ram_threshold_pct" in args:
+            config_args["ram_threshold_pct"] = args["ram_threshold_pct"]
+        cfg = saver.configure(**config_args)
+        return {"status": "configured", "config": cfg.to_dict()}
+
+    if name == "memory_autosave_status":
+        project = args.get("project")
+        key = project or "__default__"
+        if key not in _autosavers:
+            return {
+                "status": "not_configured",
+                "hint": "Use memory_autosave_configure to enable autosave",
+            }
+        return _autosavers[key].status()
 
     return {"error": f"Unknown tool: {name}"}
 

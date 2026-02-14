@@ -302,3 +302,80 @@ class Memory:
             if self._backend.store(entry) is not None:
                 count += 1
         return count
+
+    # ------------------------------------------------------------------
+    # Agent AutoSave (Phase 4)
+    # ------------------------------------------------------------------
+
+    def autosave(
+        self,
+        *,
+        project: str | None = None,
+        interval_minutes: int = 30,
+        message_threshold: int = 500,
+        ram_threshold_pct: float = 85.0,
+    ) -> Any:
+        """Enable autosave and return the AutoSave controller.
+
+        Usage::
+
+            saver = mem.autosave(project="my-agent", interval_minutes=10)
+            # ... do work ...
+            saver.tick()  # evaluates triggers, auto-saves if needed
+        """
+        from engram.autosave import AutoSave
+        from engram.sessions import SessionManager
+
+        saver = AutoSave(
+            SessionManager(db_path=self._config.db_path),
+            project=project,
+        )
+        saver.configure(
+            interval_seconds=interval_minutes * 60,
+            message_threshold=message_threshold,
+            ram_threshold_pct=ram_threshold_pct,
+        )
+        return saver
+
+    def checkpoint(
+        self,
+        reason: str = "manual",
+        *,
+        project: str | None = None,
+        summary: str | None = None,
+        key_facts: list[str] | None = None,
+        open_tasks: list[str] | None = None,
+    ) -> dict:
+        """Quick manual checkpoint. For full control, use autosave()."""
+        from engram.sessions import SessionManager
+
+        sess = SessionManager(db_path=self._config.db_path)
+        return sess.save_checkpoint(
+            project=project,
+            summary=summary or f"[checkpoint:{reason}]",
+            key_facts=key_facts,
+            open_tasks=open_tasks,
+        )
+
+    def restore(
+        self,
+        *,
+        project: str | None = None,
+    ) -> dict | None:
+        """Restore latest checkpoint. Returns checkpoint data or None."""
+        from engram.sessions import SessionManager
+
+        sess = SessionManager(db_path=self._config.db_path)
+        return sess.load_checkpoint(project=project)
+
+    def checkpoints(
+        self,
+        *,
+        project: str | None = None,
+        limit: int = 10,
+    ) -> list[dict]:
+        """List recent checkpoints."""
+        from engram.sessions import SessionManager
+
+        sess = SessionManager(db_path=self._config.db_path)
+        return sess.list_sessions(project=project, limit=limit)

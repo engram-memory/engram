@@ -415,3 +415,106 @@ LINK_TOOL_DEFINITIONS = [
         },
     },
 ]
+
+# ------------------------------------------------------------------
+# Pro Tools — Agent AutoSave (Phase 4)
+# ------------------------------------------------------------------
+
+AUTOSAVE_TOOL_DEFINITIONS = [
+    {
+        "name": "memory_checkpoint",
+        "description": (
+            "Save an incremental checkpoint with delta tracking."
+            " Use before ending a session or when you want to preserve progress."
+            " Only saves what changed since the last checkpoint."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "description": (
+                        "Why this checkpoint was triggered:"
+                        " manual, timer, message_threshold, ram_threshold, session_end"
+                    ),
+                    "default": "manual",
+                },
+                "project": {
+                    "type": "string",
+                    "description": "Project name to group checkpoints",
+                },
+                "summary": {
+                    "type": "string",
+                    "description": "Optional summary of what was accomplished",
+                },
+                "key_facts": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Important facts from this session",
+                },
+                "open_tasks": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tasks that still need to be done",
+                },
+            },
+        },
+    },
+    {
+        "name": "memory_autosave_configure",
+        "description": (
+            "Configure automatic save triggers for the current session."
+            " Set thresholds for RAM usage, message count, and timer interval."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Project name",
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable or disable autosave",
+                    "default": True,
+                },
+                "interval_minutes": {
+                    "type": "integer",
+                    "description": "Auto-save interval in minutes",
+                    "default": 30,
+                    "minimum": 1,
+                    "maximum": 1440,
+                },
+                "message_threshold": {
+                    "type": "integer",
+                    "description": "Save after N messages exchanged",
+                    "default": 500,
+                    "minimum": 10,
+                },
+                "ram_threshold_pct": {
+                    "type": "number",
+                    "description": "Save when RAM usage exceeds this percentage",
+                    "default": 85.0,
+                    "minimum": 50.0,
+                    "maximum": 99.0,
+                },
+            },
+        },
+    },
+    {
+        "name": "memory_autosave_status",
+        "description": (
+            "Get current autosave status including delta (unsaved changes),"
+            " message count, time since last save, and trigger configuration."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Project name",
+                },
+            },
+        },
+    },
+]

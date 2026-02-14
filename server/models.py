@@ -130,3 +130,24 @@ class GraphRequest(BaseModel):
     memory_id: int
     max_depth: int = Field(default=2, ge=1, le=5)
     relation: str | None = None
+
+
+# ------------------------------------------------------------------
+# Agent AutoSave (Phase 4 — Pro)
+# ------------------------------------------------------------------
+
+
+class AutoSaveConfigRequest(BaseModel):
+    project: str | None = None
+    enabled: bool = True
+    interval_minutes: int = Field(default=30, ge=1, le=1440)
+    message_threshold: int = Field(default=500, ge=10)
+    ram_threshold_pct: float = Field(default=85.0, ge=50.0, le=99.0)
+
+
+class CheckpointRequest(BaseModel):
+    reason: str = "manual"
+    project: str | None = None
+    summary: str | None = None
+    key_facts: list[str] = Field(default_factory=list)
+    open_tasks: list[str] = Field(default_factory=list)
