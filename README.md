@@ -121,6 +121,12 @@ docker compose -f docker/docker-compose.yml up
 | Privacy-First | Local by default | Cloud by default | Local possible | Cloud-focused |
 | Cost | Free (self-hosted) | $0.01+/memory | Free | Enterprise pricing |
 
+## Community
+
+- [Discord](https://discord.gg/Kba2bGbZt5) — Chat, support, feature requests
+- [GitHub Issues](https://github.com/engram-memory/engram/issues) — Bug reports & feature requests
+- [Email](mailto:support@engram-ai.dev) — support@engram-ai.dev
+
 ## License
 
 MIT

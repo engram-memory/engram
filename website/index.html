@@ -1196,7 +1196,7 @@ footer {
           <li>Dedicated Support</li>
           <li>SLA Guarantee</li>
         </ul>
-        <a href="mailto:levent@engram-ai.dev?subject=Engram%20Enterprise" class="price-btn price-btn-outline">Contact Sales</a>
+        <a href="mailto:support@engram-ai.dev?subject=Engram%20Enterprise" class="price-btn price-btn-outline">Contact Sales</a>
       </div>
     </div>
     <div class="fade-in" style="margin-top:48px">
@@ -1205,7 +1205,7 @@ footer {
         Open Source Core &mdash; Free. Forever.
       </div>
       <p class="waitlist-note">
-        Pay securely via Stripe. Cancel anytime. <a href="mailto:levent@engram-ai.dev?subject=Engram%20Pro%20Question">Questions?</a>
+        Pay securely via Stripe. Cancel anytime. <a href="mailto:support@engram-ai.dev?subject=Engram%20Pro%20Question">Questions?</a>
       </p>
     </div>
   </div>
@@ -1392,10 +1392,13 @@ footer {
         <ul class="footer-links">
           <li><a href="https://github.com/engram-memory/engram" target="_blank" rel="noopener">GitHub</a></li>
           <li><a href="https://pypi.org/project/engram-core/" target="_blank" rel="noopener">PyPI</a></li>
-          <li><a href="#" title="Coming soon">Docs</a></li>
+          <li><a href="https://discord.gg/Kba2bGbZt5" target="_blank" rel="noopener">Discord</a></li>
+          <li><a href="mailto:support@engram-ai.dev">Support</a></li>
         </ul>
       </div>
       <div class="footer-right">
+        <a href="mailto:support@engram-ai.dev">support@engram-ai.dev</a>
+        <span>&middot;</span>
         <span>MIT License</span>
         <span>&middot;</span>
         <span>&copy; 2026 Levent</span>
@@ -1466,7 +1469,7 @@ function startCheckout() {
     .catch(() => {
       btn.textContent = origText;
       btn.disabled = false;
-      alert('Something went wrong. Please try again or contact levent@engram-ai.dev');
+      alert('Something went wrong. Please try again or contact support@engram-ai.dev');
     });
 }
 
@@ -1513,7 +1516,7 @@ function startCheckout() {
     })
     .catch(err => {
       document.getElementById('key-status').innerHTML = err.message +
-        '<br><br><a href="mailto:levent@engram-ai.dev?subject=Pro%20Activation%20Issue" style="color:#22D3EE">Contact support</a>';
+        '<br><br><a href="mailto:support@engram-ai.dev?subject=Pro%20Activation%20Issue" style="color:#22D3EE">Contact support</a>';
     });
 })();
 
