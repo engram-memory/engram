@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engram — Account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #0f0f18;
+  --bg-card: #12121e;
+  --bg-card-hover: #18182a;
+  --bg-code: #0d0d16;
+  --border: #1e1e35;
+  --border-glow: #6B46C120;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a8;
+  --text-muted: #55556a;
+  --purple: #6B46C1;
+  --purple-light: #8B5CF6;
+  --purple-glow: #6B46C140;
+  --cyan: #06B6D4;
+  --cyan-light: #22D3EE;
+  --green: #10B981;
+  --red: #EF4444;
+  --yellow: #F59E0B;
+  --gradient: linear-gradient(135deg, var(--purple), var(--cyan));
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+.gradient-text { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* Nav */
+nav {
+  padding: 16px 0;
+  background: #0a0a0fcc;
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.nav-logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-decoration: none;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-logo .logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--gradient);
+  border-radius: 6px;
+}
+
+.nav-links { display: flex; gap: 20px; align-items: center; }
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text-primary); }
+
+.btn-logout {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+/* Login Form */
+.login-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 65px);
+  padding: 48px 0;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.login-card h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.login-card .subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 28px;
+}
+
+.form-group { margin-bottom: 16px; }
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus { border-color: var(--purple); }
+
+.btn-primary {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: var(--gradient);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-top: 24px;
+  font-family: var(--font-sans);
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: wait; }
+
+.login-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-top: 12px;
+  display: none;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.login-footer a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+/* Dashboard */
+.dashboard { display: none; padding: 48px 0; }
+
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dash-header h1 { font-size: 1.8rem; font-weight: 800; }
+
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.tier-free { background: #1e1e35; color: var(--text-secondary); }
+.tier-pro { background: linear-gradient(135deg, #6B46C130, #06B6D430); color: var(--cyan-light); border: 1px solid var(--purple); }
+.tier-enterprise { background: linear-gradient(135deg, #F59E0B20, #EF444420); color: var(--yellow); border: 1px solid var(--yellow); }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-sans);
+}
+.btn-small:hover { border-color: var(--purple); background: var(--bg-card-hover); }
+
+.btn-gradient {
+  background: var(--gradient);
+  border: none;
+  color: white;
+}
+.btn-gradient:hover { opacity: 0.9; background: var(--gradient); }
+
+.btn-danger {
+  color: var(--red);
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+}
+.btn-danger:hover { border-color: var(--red); background: #EF444410; }
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  padding: 20px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-item .value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.stat-item .label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Key list */
+.key-list { list-style: none; }
+
+.key-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.key-info { flex: 1; min-width: 200px; }
+
+.key-prefix {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--cyan);
+}
+
+.key-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.key-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Billing */
+.billing-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.billing-detail { color: var(--text-secondary); font-size: 0.9rem; }
+.billing-detail strong { color: var(--text-primary); }
+
+/* New key modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,0.85);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--purple);
+  border-radius: 16px;
+  padding: 36px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+}
+
+.modal h3 { font-size: 1.2rem; margin-bottom: 12px; }
+
+.modal .key-display {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 16px 0;
+  position: relative;
+  word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--cyan);
+  text-align: left;
+}
+
+.modal .warning {
+  color: var(--yellow);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+.btn-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 12px;
+  background: var(--purple);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .card { padding: 20px; }
+  .key-item { flex-direction: column; align-items: flex-start; }
+  .key-meta { text-align: left; }
+  .billing-info { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon"></div>
+      engram
+    </a>
+    <div class="nav-links" id="navAuth" style="display:none">
+      <a href="/">Home</a>
+      <a href="https://github.com/engram-memory/engram" target="_blank" rel="noopener">Docs</a>
+      <button class="btn-logout" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</nav>
+
+<!-- Login -->
+<div class="login-section" id="loginSection">
+  <div class="login-card">
+    <h2>Welcome <span class="gradient-text">back.</span></h2>
+    <p class="subtitle">Sign in to manage your Engram account.</p>
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" required autocomplete="email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Your password">
+      </div>
+      <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+    <div class="login-footer">
+      Don't have an account? <a href="/#pricing">Get started free</a>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+  <div class="container">
+    <div class="dash-header">
+      <h1>Account</h1>
+      <span class="tier-badge" id="tierBadge"></span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-item">
+        <div class="value gradient-text" id="statMemories">-</div>
+        <div class="label">Memories</div>
+      </div>
+      <div class="stat-item">
+        <div class="value gradient-text" id="statEmail">-</div>
+        <div class="label">Account</div>
+      </div>
+      <div class="stat-item">
+        <div class="value gradient-text" id="statKeys">-</div>
+        <div class="label">API Keys</div>
+      </div>
+      <div class="stat-item">
+        <div class="value gradient-text" id="statLimit">-</div>
+        <div class="label">Memory Limit</div>
+      </div>
+    </div>
+
+    <!-- API Keys -->
+    <div class="card">
+      <div class="card-header">
+        <h3>API Keys</h3>
+        <button class="btn-small btn-gradient" onclick="createKey()">+ New Key</button>
+      </div>
+      <ul class="key-list" id="keyList">
+        <li class="empty-state">Loading...</li>
+      </ul>
+    </div>
+
+    <!-- Billing -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Billing</h3>
+      </div>
+      <div class="billing-info">
+        <div class="billing-detail">
+          Current plan: <strong id="billingTier">-</strong>
+        </div>
+        <div>
+          <button class="btn-small" id="portalBtn" onclick="openPortal()" style="display:none">Manage Subscription</button>
+          <a href="/#pricing" class="btn-small btn-gradient" id="upgradeBtn" style="display:none;text-decoration:none">Upgrade to Pro</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Key Modal -->
+<div class="modal-overlay" id="keyModal">
+  <div class="modal">
+    <h3>New API Key</h3>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:8px">Your new API key:</p>
+    <div class="key-display">
+      <span id="newKeyValue"></span>
+      <button class="btn-copy" onclick="copyKey()">Copy</button>
+    </div>
+    <p class="warning">Save this key now. It cannot be shown again.</p>
+    <button class="btn-primary" onclick="closeKeyModal()" style="max-width:200px;margin:0 auto">I've saved my key</button>
+  </div>
+</div>
+
+<script>
+const API = 'https://api.engram-ai.dev';
+let token = localStorage.getItem('engram_token');
+let refreshToken = localStorage.getItem('engram_refresh');
+
+// Init
+if (token) {
+  showDashboard();
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  err.style.display = 'none';
+
+  try {
+    const resp = await fetch(API + '/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('loginEmail').value,
+        password: document.getElementById('loginPassword').value,
+      }),
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json();
+      throw new Error(data.detail || 'Login failed');
+    }
+
+    const data = await resp.json();
+    token = data.access_token;
+    refreshToken = data.refresh_token;
+    localStorage.setItem('engram_token', token);
+    localStorage.setItem('engram_refresh', refreshToken);
+    showDashboard();
+  } catch (error) {
+    err.textContent = error.message;
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+async function showDashboard() {
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('navAuth').style.display = 'flex';
+  await Promise.all([loadUser(), loadKeys(), loadStats()]);
+}
+
+async function apiFetch(path, opts = {}) {
+  opts.headers = opts.headers || {};
+  opts.headers['Authorization'] = 'Bearer ' + token;
+  let resp = await fetch(API + path, opts);
+
+  // Token expired — try refresh
+  if (resp.status === 401 && refreshToken) {
+    const refreshResp = await fetch(API + '/v1/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (refreshResp.ok) {
+      const data = await refreshResp.json();
+      token = data.access_token;
+      refreshToken = data.refresh_token;
+      localStorage.setItem('engram_token', token);
+      localStorage.setItem('engram_refresh', refreshToken);
+      opts.headers['Authorization'] = 'Bearer ' + token;
+      resp = await fetch(API + path, opts);
+    } else {
+      logout();
+      return null;
+    }
+  }
+
+  if (resp.status === 401) { logout(); return null; }
+  return resp;
+}
+
+async function loadUser() {
+  const resp = await apiFetch('/v1/auth/me');
+  if (!resp) return;
+  const data = await resp.json();
+
+  document.getElementById('statEmail').textContent = data.email.split('@')[0];
+
+  const badge = document.getElementById('tierBadge');
+  const tier = data.tier;
+  badge.textContent = tier.toUpperCase();
+  badge.className = 'tier-badge tier-' + tier;
+
+  document.getElementById('billingTier').textContent =
+    tier === 'free' ? 'Free' : tier === 'pro' ? 'Pro' : 'Enterprise';
+
+  const limit = data.limits?.max_memories;
+  document.getElementById('statLimit').textContent =
+    limit === 0 ? 'Unlimited' : (limit >= 1000 ? (limit / 1000) + 'K' : limit);
+
+  if (tier === 'free') {
+    document.getElementById('upgradeBtn').style.display = 'inline-block';
+    document.getElementById('portalBtn').style.display = 'none';
+  } else {
+    document.getElementById('upgradeBtn').style.display = 'none';
+    document.getElementById('portalBtn').style.display = 'inline-block';
+  }
+}
+
+async function loadKeys() {
+  const resp = await apiFetch('/v1/auth/keys');
+  if (!resp) return;
+  const keys = await resp.json();
+  const list = document.getElementById('keyList');
+
+  document.getElementById('statKeys').textContent = keys.length;
+
+  if (keys.length === 0) {
+    list.innerHTML = '<li class="empty-state">No API keys yet. Create one to get started.</li>';
+    return;
+  }
+
+  list.innerHTML = keys.map(k => {
+    const created = k.created_at ? new Date(k.created_at).toLocaleDateString() : '-';
+    const used = k.last_used_at ? timeAgo(new Date(k.last_used_at)) : 'Never';
+    return '<li class="key-item">' +
+      '<div class="key-info">' +
+        '<div class="key-prefix">' + escHtml(k.key_prefix) + '...</div>' +
+        '<div class="key-name">' + escHtml(k.name || 'default') + '</div>' +
+      '</div>' +
+      '<div class="key-meta">Created: ' + created + '<br>Last used: ' + used + '</div>' +
+      '<button class="btn-small btn-danger" onclick="revokeKey(\'' + k.id + '\')">Revoke</button>' +
+    '</li>';
+  }).join('');
+}
+
+async function loadStats() {
+  const resp = await apiFetch('/v1/stats');
+  if (!resp || !resp.ok) {
+    document.getElementById('statMemories').textContent = '0';
+    return;
+  }
+  const data = await resp.json();
+  document.getElementById('statMemories').textContent =
+    data.total_memories >= 1000 ? (data.total_memories / 1000).toFixed(1) + 'K' : data.total_memories;
+}
+
+async function createKey() {
+  const name = 'key-' + Date.now().toString(36);
+  const resp = await apiFetch('/v1/auth/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!resp) return;
+
+  if (!resp.ok) {
+    const err = await resp.json();
+    alert(err.detail || 'Failed to create key');
+    return;
+  }
+
+  const data = await resp.json();
+  document.getElementById('newKeyValue').textContent = data.key;
+  document.getElementById('keyModal').classList.add('active');
+}
+
+function closeKeyModal() {
+  document.getElementById('keyModal').classList.remove('active');
+  loadKeys();
+}
+
+function copyKey() {
+  const key = document.getElementById('newKeyValue').textContent;
+  navigator.clipboard.writeText(key).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+async function revokeKey(keyId) {
+  if (!confirm('Revoke this API key? This cannot be undone.')) return;
+  const resp = await apiFetch('/v1/auth/keys/' + keyId, { method: 'DELETE' });
+  if (resp && resp.ok) loadKeys();
+}
+
+async function openPortal() {
+  const resp = await apiFetch('/v1/billing/portal', { method: 'POST' });
+  if (!resp) return;
+  const data = await resp.json();
+  if (data.portal_url) window.location.href = data.portal_url;
+}
+
+function logout() {
+  token = null;
+  refreshToken = null;
+  localStorage.removeItem('engram_token');
+  localStorage.removeItem('engram_refresh');
+  document.getElementById('loginSection').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('navAuth').style.display = 'none';
+}
+
+function timeAgo(date) {
+  const diff = (Date.now() - date.getTime()) / 1000;
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+
+</body>
+</html>
