@@ -23,6 +23,9 @@ class TierLimits:
     sso: bool
     audit_logs: bool
     priority_support: bool
+    synapse_bus: bool = False
+    synapse_channels: int = 0  # max custom channels, 0 = no access or unlimited
+    synapse_messages_per_day: int = 0  # 0 = no access or unlimited
 
 
 FREE = TierLimits(
@@ -42,6 +45,9 @@ FREE = TierLimits(
     sso=False,
     audit_logs=False,
     priority_support=False,
+    synapse_bus=False,
+    synapse_channels=0,
+    synapse_messages_per_day=0,
 )
 
 PRO = TierLimits(
@@ -61,6 +67,9 @@ PRO = TierLimits(
     sso=False,
     audit_logs=False,
     priority_support=False,
+    synapse_bus=True,
+    synapse_channels=10,
+    synapse_messages_per_day=50_000,
 )
 
 ENTERPRISE = TierLimits(
@@ -80,6 +89,9 @@ ENTERPRISE = TierLimits(
     sso=True,
     audit_logs=True,
     priority_support=True,
+    synapse_bus=True,
+    synapse_channels=0,  # unlimited
+    synapse_messages_per_day=0,  # unlimited
 )
 
 TIERS: dict[str, TierLimits] = {

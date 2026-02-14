@@ -38,6 +38,10 @@ server = [
     "PyJWT>=2.8.0",
     "stripe>=8.0.0",
     "python-dotenv>=1.0.0",
+    "httpx>=0.24.0",
+]
+synapse = [
+    "synapse-bus>=0.1.0",
 ]
 mcp = [
     "mcp>=1.2.0",
@@ -47,7 +51,7 @@ embeddings = [
     "numpy>=1.24.0",
 ]
 all = [
-    "engram-core[server,mcp,embeddings]",
+    "engram-core[server,synapse,mcp,embeddings]",
 ]
 dev = [
     "pytest>=7.0",

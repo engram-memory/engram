@@ -13,7 +13,7 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 PRICE_CONFIG = {
     "pro": {
         "name": "Engram Pro",
-        "description": "250K memories, semantic search, WebSocket, analytics",
+        "description": "250K memories, Synapse message bus, semantic search, WebSocket, analytics",
         "amount": 1490,  # €14.90
         "currency": "eur",
     },

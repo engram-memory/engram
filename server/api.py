@@ -39,6 +39,7 @@ from server.models import (
     StoreResponse,
     UpdateRequest,
 )
+from server.synapse_routes import router as synapse_router
 from server.websocket import manager
 
 app = FastAPI(
@@ -64,6 +65,7 @@ app.add_middleware(
 init_admin_db()
 app.include_router(auth_router)
 app.include_router(billing_router)
+app.include_router(synapse_router)
 
 if auth_deps.CLOUD_MODE:
     from server.middleware import RateLimitMiddleware

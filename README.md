@@ -25,6 +25,7 @@ context = mem.recall(limit=10)
 - **Full-text search** — SQLite FTS5 for fast, typo-tolerant search.
 - **Optional embeddings** — Plug in `sentence-transformers` for semantic search.
 - **Memory decay** — Automatic forgetting curve for stale memories.
+- **Synapse Message Bus** (Pro) — Real-time pub/sub channels for multi-agent communication.
 
 ## Installation
 
@@ -36,6 +37,7 @@ With optional extras:
 
 ```bash
 pip install engram-core[server]      # REST API + WebSocket
+pip install engram-core[synapse]     # Synapse message bus (Pro)
 pip install engram-core[mcp]         # MCP server
 pip install engram-core[embeddings]  # Semantic search
 pip install engram-core[all]         # Everything
