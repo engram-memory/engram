@@ -1405,6 +1405,11 @@ footer {
         <h3>Synapse Message Bus</h3>
         <p>Real-time pub/sub channels for multi-agent communication. Connect your agents with alerts, commands, and data streams. Pro feature.</p>
       </div>
+      <div class="feature-card fade-in" style="--i:7">
+        <div class="feature-icon">&#x1F3AF;</div>
+        <h3>Smart Context</h3>
+        <p>One API call. Engram auto-selects the most relevant memories for your prompt, ranked by relevance &times; importance, fitted to your token budget. No manual search needed.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1472,6 +1477,27 @@ footer {
             <td><span class="cross">No</span></td>
           </tr>
           <tr>
+            <td>Semantic Search</td>
+            <td class="highlight"><span class="check">Pro</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="cross">No</span></td>
+          </tr>
+          <tr>
+            <td>Auto Context Builder</td>
+            <td class="highlight"><span class="check">Pro</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="cross">No</span></td>
+          </tr>
+          <tr>
+            <td>Memory TTL / Expiry</td>
+            <td class="highlight"><span class="check">Pro</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="cross">No</span></td>
+            <td><span class="cross">No</span></td>
+          </tr>
+          <tr>
             <td>License</td>
             <td class="highlight"><span class="check">MIT</span></td>
             <td>Apache 2.0</td>
@@ -1522,6 +1548,9 @@ footer {
           <li>Synapse Message Bus</li>
           <li>Semantic Search</li>
           <li>WebSocket Real-Time API</li>
+          <li>Smart Context Builder</li>
+          <li>Memory Expiry (TTL)</li>
+          <li>Backfill Tools</li>
           <li>Analytics Dashboard</li>
           <li>Priority Email Support</li>
         </ul>
@@ -1721,6 +1750,15 @@ footer {
         </button>
         <div class="faq-answer">
           <p>Engram is the memory layer, not the agent runtime. Your agents run wherever you want &mdash; Claude Code, Cursor, custom scripts, LangChain, CrewAI. Engram just gives them persistent memory via a Python SDK, REST API, or MCP server. Think of it as a database your agents can remember with.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          What is the Smart Context Builder?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Instead of manually searching and assembling memories, the Smart Context Builder does it in one call. Give it a prompt and a token budget &mdash; it combines full-text search, semantic search, and priority recall, deduplicates and ranks results by relevance &times; importance, and returns a ready-to-use context string that fits your token budget. Perfect for injecting relevant memory into LLM prompts automatically.</p>
         </div>
       </div>
     </div>
