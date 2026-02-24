@@ -23,7 +23,7 @@ from engram.config import EngramConfig
 from engram.exceptions import MemoryNotFoundError
 from engram.sessions import SessionManager
 from server.auth.database import init_admin_db
-from server.auth.dependencies import AuthUser, get_namespace, require_auth
+from server.auth.dependencies import AuthUser, get_namespace, require_auth, require_scope
 from server.auth.routes import router as auth_router
 from server.billing.routes import router as billing_router
 from server.demo_routes import router as demo_router
@@ -64,8 +64,8 @@ app.add_middleware(
         "https://www.engram-ai.dev",
         "http://localhost:3000",
     ],
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "X-API-Key", "X-Namespace", "Content-Type"],
 )
 
 # Always register auth routes (they work in both modes).
@@ -207,7 +207,7 @@ def health():
 @app.post("/v1/memories", response_model=StoreResponse)
 async def store_memory(
     body: StoreRequest,
-    user: AuthUser = Depends(require_auth),
+    user: AuthUser = Depends(require_scope("memories:write")),
     namespace: str = Depends(get_namespace),
 ):
     ns = body.namespace or namespace
@@ -257,7 +257,7 @@ def list_memories(
 async def update_memory(
     memory_id: int,
     body: UpdateRequest,
-    user: AuthUser = Depends(require_auth),
+    user: AuthUser = Depends(require_scope("memories:write")),
     namespace: str = Depends(get_namespace),
 ):
     fields: dict[str, Any] = {}
@@ -282,7 +282,7 @@ async def update_memory(
 @app.delete("/v1/memories/{memory_id}")
 async def delete_memory(
     memory_id: int,
-    user: AuthUser = Depends(require_auth),
+    user: AuthUser = Depends(require_scope("memories:write")),
     namespace: str = Depends(get_namespace),
 ):
     if not _mem(user, namespace).delete(memory_id):
@@ -449,7 +449,7 @@ def export_memories(
 @app.post("/v1/import")
 def import_memories(
     body: ImportRequest,
-    user: AuthUser = Depends(require_auth),
+    user: AuthUser = Depends(require_scope("memories:write")),
     namespace: str = Depends(get_namespace),
 ):
     count = _mem(user, namespace).import_memories(body.data)
@@ -719,6 +719,19 @@ def restore_checkpoint(
 
 @app.websocket("/v1/ws/{namespace}")
 async def ws_endpoint(websocket: WebSocket, namespace: str):
+    # Authenticate via query parameter: /v1/ws/default?token=<jwt>
+    if auth_deps.CLOUD_MODE:
+        from server.auth.jwt_handler import decode_token
+
+        token = websocket.query_params.get("token", "")
+        if not token:
+            await websocket.close(code=4001, reason="Authentication required. Pass ?token=<jwt>")
+            return
+        payload = decode_token(token)
+        if not payload or payload.get("type") != "access":
+            await websocket.close(code=4001, reason="Invalid or expired token")
+            return
+
     await manager.connect(websocket, namespace)
     try:
         while True:
@@ -735,7 +748,8 @@ async def ws_endpoint(websocket: WebSocket, namespace: str):
 def run():
     import uvicorn
 
-    uvicorn.run("server.api:app", host="0.0.0.0", port=8100, reload=True)
+    _host = os.environ.get("ENGRAM_HOST", "127.0.0.1")
+    uvicorn.run("server.api:app", host=_host, port=8100, reload=True)
 
 
 if __name__ == "__main__":

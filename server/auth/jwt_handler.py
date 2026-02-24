@@ -8,21 +8,18 @@ from typing import Any
 
 import jwt
 
-_DEFAULT_SECRET = "engram-dev-secret-change-in-production"
-_SECRET = os.environ.get("ENGRAM_JWT_SECRET", _DEFAULT_SECRET)
+_CLOUD_MODE = os.environ.get("ENGRAM_CLOUD_MODE", "").lower() in ("1", "true", "yes")
+_SECRET = os.environ.get("ENGRAM_JWT_SECRET", "")
 
-# Warn loudly if using default secret in cloud/production mode
-if _SECRET == _DEFAULT_SECRET and os.environ.get("ENGRAM_CLOUD_MODE", "").lower() in (
-    "1",
-    "true",
-    "yes",
-):
-    import logging
-
-    logging.getLogger(__name__).warning(
-        "ENGRAM_JWT_SECRET not set! Using insecure default. "
-        "Set ENGRAM_JWT_SECRET env var for production."
-    )
+if not _SECRET:
+    if _CLOUD_MODE:
+        raise RuntimeError(
+            "FATAL: ENGRAM_JWT_SECRET is not set but ENGRAM_CLOUD_MODE is active! "
+            "Generate a secret with: python3 -c \"import secrets; print(secrets.token_urlsafe(64))\" "
+            "and set it as ENGRAM_JWT_SECRET environment variable."
+        )
+    # Local-only fallback — safe because local mode doesn't expose auth endpoints to the internet
+    _SECRET = "engram-local-dev-only-not-for-production"
 
 _ALGORITHM = "HS256"
 _ACCESS_TTL = 900  # 15 minutes

@@ -26,6 +26,13 @@ router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 BASE_URL = os.environ.get("ENGRAM_BASE_URL", "https://engram-ai.dev")
+_CLOUD_MODE = os.environ.get("ENGRAM_CLOUD_MODE", "").lower() in ("1", "true", "yes")
+
+if _CLOUD_MODE and not WEBHOOK_SECRET:
+    logging.getLogger(__name__).critical(
+        "STRIPE_WEBHOOK_SECRET is not set! Webhooks will reject all events in cloud mode. "
+        "Set it from Stripe Dashboard → Developers → Webhooks → Signing secret."
+    )
 
 
 # ------------------------------------------------------------------
@@ -250,17 +257,18 @@ async def stripe_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
-    if WEBHOOK_SECRET:
-        try:
-            event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
-        except (stripe.SignatureVerificationError, Exception) as e:
-            log.warning("Webhook signature verification failed: %s", e)
-            raise HTTPException(400, "Invalid webhook signature")  # noqa: B904
-    else:
-        # Dev/test mode: parse without signature verification
-        import json
+    if not WEBHOOK_SECRET:
+        log.error("Webhook received but STRIPE_WEBHOOK_SECRET is not set — rejecting.")
+        raise HTTPException(500, "Webhook signature verification not configured")
 
-        event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
+    except stripe.SignatureVerificationError as e:
+        log.warning("Webhook signature verification failed: %s", e)
+        raise HTTPException(400, "Invalid webhook signature")  # noqa: B904
+    except Exception as e:
+        log.warning("Webhook parsing failed: %s", e)
+        raise HTTPException(400, "Invalid webhook payload")  # noqa: B904
 
     event_type = event["type"]
 

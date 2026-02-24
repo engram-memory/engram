@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import time
 import uuid
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from server.auth import database as db
 from server.auth.api_keys import generate_api_key
@@ -29,9 +31,58 @@ router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 TRIAL_DAYS = 7
 
+# ------------------------------------------------------------------
+# Rate limiting for auth endpoints (per IP)
+# ------------------------------------------------------------------
+
+_register_hits: dict[str, list[float]] = defaultdict(list)
+_REGISTER_LIMIT = 10  # max registrations per IP per window
+_REGISTER_WINDOW = 600  # 10 minutes
+
+_login_failures: dict[str, list[float]] = defaultdict(list)
+_LOGIN_FAIL_LIMIT = 5  # max failed attempts per email
+_LOGIN_LOCKOUT = 900  # 15 minutes
+
+
+def reset_auth_rate_limits() -> None:
+    """Clear all rate limit state. Used in tests."""
+    _register_hits.clear()
+    _login_failures.clear()
+
+
+def _check_register_rate(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    cutoff = now - _REGISTER_WINDOW
+    hits = _register_hits[ip] = [t for t in _register_hits[ip] if t > cutoff]
+    if len(hits) >= _REGISTER_LIMIT:
+        raise HTTPException(429, "Too many registrations. Try again later.")
+    hits.append(now)
+
+
+def _check_login_lockout(email: str) -> None:
+    now = time.monotonic()
+    cutoff = now - _LOGIN_LOCKOUT
+    failures = _login_failures[email] = [t for t in _login_failures[email] if t > cutoff]
+    if len(failures) >= _LOGIN_FAIL_LIMIT:
+        raise HTTPException(
+            429,
+            "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.",
+        )
+
+
+def _record_login_failure(email: str) -> None:
+    _login_failures[email].append(time.monotonic())
+
+
+def _clear_login_failures(email: str) -> None:
+    _login_failures.pop(email, None)
+
 
 @router.post("/register", response_model=TokenResponse)
-def register(body: RegisterRequest):
+def register(body: RegisterRequest, request: Request):
+    _check_register_rate(request)
+
     existing = db.get_user_by_email(body.email)
     if existing:
         raise HTTPException(409, "Email already registered")
@@ -53,10 +104,14 @@ def register(body: RegisterRequest):
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest):
+    _check_login_lockout(body.email)
+
     user = db.get_user_by_email(body.email)
     if not user or not verify_password(body.password, user["password_hash"]):
+        _record_login_failure(body.email)
         raise HTTPException(401, "Invalid email or password")
 
+    _clear_login_failures(body.email)
     db.update_last_login(user["id"])
     access_token, expires_in = create_access_token(user["id"], user["tier"])
     refresh_token = create_refresh_token(user["id"])

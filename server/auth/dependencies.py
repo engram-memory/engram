@@ -110,6 +110,28 @@ def get_current_user(request: Request) -> AuthUser:
     return require_auth(request)
 
 
+def require_scope(*scopes: str):
+    """FastAPI dependency factory: require specific scopes on the authenticated user.
+
+    Usage:
+        @app.post("/endpoint")
+        def my_endpoint(user: AuthUser = Depends(require_scope("memories:write"))):
+            ...
+    """
+
+    def _checker(request: Request) -> AuthUser:
+        user = require_auth(request)
+        for scope in scopes:
+            if scope not in user.scopes:
+                raise HTTPException(
+                    403,
+                    f"Insufficient permissions. Required scope: {scope}",
+                )
+        return user
+
+    return _checker
+
+
 def get_namespace(request: Request) -> str:
     """Read X-Namespace header, defaulting to 'default'."""
     return request.headers.get("X-Namespace", "default")

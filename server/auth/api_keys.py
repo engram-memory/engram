@@ -26,12 +26,27 @@ def hash_key(key: str) -> str:
 
 def validate_api_key(key: str) -> dict | None:
     """Validate an API key. Returns the key record with user info, or None."""
+    from datetime import datetime, timezone
+
     if not key.startswith(_PREFIX):
         return None
     key_h = hash_key(key)
     record = db.get_api_key_by_hash(key_h)
     if record is None:
         return None
+
+    # Check expiry if set
+    expires_at = record.get("expires_at")
+    if expires_at:
+        try:
+            exp_dt = datetime.fromisoformat(expires_at)
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) >= exp_dt:
+                return None  # Key expired
+        except (ValueError, TypeError):
+            pass
+
     db.touch_api_key(record["id"])
     user = db.get_user_by_id(record["user_id"])
     if user is None:
