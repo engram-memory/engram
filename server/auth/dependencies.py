@@ -52,7 +52,10 @@ def _check_trial_expiry(user_row: dict) -> dict:
         from server.auth.database import expire_trial
 
         expire_trial(user_row["id"])
-        log.info("Trial expired for user %s (%s), downgraded to free", user_row["id"], user_row["email"])
+        log.info(
+            "Trial expired for user %s (%s), downgraded to free",
+            user_row["id"], user_row["email"],
+        )
         user_row = dict(user_row)
         user_row["tier"] = "free"
         user_row["trial_end"] = None
