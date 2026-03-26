@@ -15,7 +15,8 @@ if not _SECRET:
     if _CLOUD_MODE:
         raise RuntimeError(
             "FATAL: ENGRAM_JWT_SECRET is not set but ENGRAM_CLOUD_MODE is active! "
-            "Generate a secret with: python3 -c \"import secrets; print(secrets.token_urlsafe(64))\" "
+            "Generate a secret with: "
+            "python3 -c \"import secrets; print(secrets.token_urlsafe(64))\" "
             "and set it as ENGRAM_JWT_SECRET environment variable."
         )
     # Local-only fallback — safe because local mode doesn't expose auth endpoints to the internet
