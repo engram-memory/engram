@@ -40,7 +40,11 @@ class Memory:
         # Optional embedding provider (graceful fallback)
         self._embedder = None
         if self._config.enable_embeddings:
-            if self._config.embedding_provider == "ollama":
+            if self._config.embedding_provider == "fake":
+                from engram.embeddings.fake import FakeEmbedding
+
+                self._embedder = FakeEmbedding()
+            elif self._config.embedding_provider == "ollama":
                 try:
                     from engram.embeddings.ollama import OllamaEmbedding
 
