@@ -40,18 +40,35 @@ class Memory:
         # Optional embedding provider (graceful fallback)
         self._embedder = None
         if self._config.enable_embeddings:
-            try:
-                from engram.embeddings.local import LocalEmbedding
+            if self._config.embedding_provider == "ollama":
+                try:
+                    from engram.embeddings.ollama import OllamaEmbedding
 
-                self._embedder = LocalEmbedding(self._config.embedding_model)
-            except ImportError:
-                import warnings
+                    self._embedder = OllamaEmbedding(
+                        model=self._config.embedding_model,
+                        base_url=self._config.ollama_base_url,
+                    )
+                except Exception:
+                    import warnings
 
-                warnings.warn(
-                    "sentence-transformers not installed. Embeddings disabled. "
-                    "Install with: pip install engram-core[embeddings]",
-                    stacklevel=2,
-                )
+                    warnings.warn(
+                        "Ollama embedding provider failed to initialize. "
+                        "Falling back to no embeddings.",
+                        stacklevel=2,
+                    )
+            else:
+                try:
+                    from engram.embeddings.local import LocalEmbedding
+
+                    self._embedder = LocalEmbedding(self._config.embedding_model)
+                except ImportError:
+                    import warnings
+
+                    warnings.warn(
+                        "sentence-transformers not installed. Embeddings disabled. "
+                        "Install with: pip install engram-core[embeddings]",
+                        stacklevel=2,
+                    )
 
     # ------------------------------------------------------------------
     # Public API
@@ -260,9 +277,12 @@ class Memory:
             if not entries:
                 break
             for entry in entries:
-                embedding = self._embedder.embed(entry.content)
-                self._backend.update_embedding(entry.id, embedding)
-                count += 1
+                try:
+                    embedding = self._embedder.embed(entry.content)
+                    self._backend.update_embedding(entry.id, embedding)
+                    count += 1
+                except Exception:
+                    pass  # Skip failed entries, continue with next
             offset += batch_size
         return count
 

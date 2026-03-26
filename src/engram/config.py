@@ -15,7 +15,9 @@ class EngramConfig(BaseModel):
     )
     storage_backend: str = "sqlite"
     enable_embeddings: bool = True
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_provider: str = "ollama"  # "ollama" (GPU) or "local"
+    embedding_model: str = "mxbai-embed-large"
+    ollama_base_url: str = "http://localhost:11434"
     default_namespace: str = "default"
     auto_decay: bool = False
     decay_rate: float = Field(default=0.01, ge=0.0, le=1.0)
